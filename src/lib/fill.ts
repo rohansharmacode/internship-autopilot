@@ -134,6 +134,8 @@ export function rememberAnswers(profile: Profile, fields: FormField[], company =
   for (const f of fields) {
     if (f.source !== "you" || !f.value.trim() || f.type === "file" || isStandard(f)) continue;
     if (company && normalise(f.label).includes(normalise(company))) continue;
+    // Consent and certification are given per application, never carried over.
+    if (/certif|i agree|consent|acknowledg|attest|signature/i.test(f.label)) continue;
     saved.set(normalise(f.label), { question: f.label, answer: f.value, savedAt: now });
   }
   return [...saved.values()];

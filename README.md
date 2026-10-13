@@ -49,6 +49,9 @@ drafts for the best new matches. If you also let it send, it only sends applicat
 answer came from your profile or from an answer you wrote before. Anything Claude wrote, anything missing,
 and anything below your chosen match score waits for you. The daily limit still applies.
 
+To see it work before touching a real company, press **Try it on a practice form** on the Overview. The
+app fills and submits a pretend application served by the app itself.
+
 Turn on **Rehearsal mode** in Settings to watch it fill forms without ever pressing Submit. That's a
 good way to try it first.
 

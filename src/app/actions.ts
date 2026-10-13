@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { aiAvailable, profileFromDocuments } from "@/lib/ai";
 import { prepareApplication, prepareBest, recordManualApplication, refreshJobs, rescoreJobs, saveAnswers, sendApplication, setStatus } from "@/lib/applications";
@@ -8,7 +9,10 @@ import { contactsFromText, importGithub, pdfToText } from "@/lib/profile-import"
 import { mergeSkills } from "@/lib/skills";
 import { boardFromUrl } from "@/lib/sources";
 import { runAutopilot } from "@/lib/autopilot";
-import { readDb, saveFile, updateDb } from "@/lib/store";
+import { autoFill } from "@/lib/fill";
+import { PRACTICE_FIELDS } from "@/lib/practice";
+import { fillAndSubmit } from "@/lib/submit";
+import { DATA_DIR, readDb, saveFile, updateDb } from "@/lib/store";
 import type { Outcome, Profile, Source, YesNo } from "@/lib/types";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -272,4 +276,30 @@ export async function saveOutcome(fd: FormData) {
     a.updatedAt = new Date().toISOString();
   });
   back(`/applications/${id}`, "Saved.");
+}
+
+export async function practiceRun() {
+  const db = await readDb();
+  if (!db.profile.cv) back("/", "Upload your CV on the Profile page first; the practice form attaches it.");
+  const host = (await headers()).get("host") ?? "127.0.0.1:3000";
+  const fields = autoFill(PRACTICE_FIELDS, db.profile).map((f) =>
+    f.key === "why" ? { ...f, value: "Practice answer: I enjoy building software people use.", source: "ai" as const } : f,
+  );
+  const result = await fillAndSubmit({
+    source: "greenhouse",
+    url: `http://${host}/practice`,
+    fields,
+    files: { resume: db.profile.cv.storedPath },
+    rehearsal: false,
+    headed: db.settings.showBrowser,
+    screenshotPath: `${DATA_DIR}/screens/practice.png`,
+    handoffTimeoutMs: 2 * 60 * 1000,
+  }).catch((err: Error) => ({ status: "failed" as const, log: [err.message.split("\n")[0]] }));
+  const missing = fields.filter((f) => f.required && !f.value).map((f) => f.label);
+  back(
+    "/",
+    result.status === "submitted"
+      ? `Practice run worked: the app filled the form and the practice site confirmed it.${missing.length ? ` Your profile is missing: ${missing.join("; ")}.` : ""}`
+      : `Practice run didn't finish: ${result.log.slice(-3).join(" ")}`,
+  );
 }

@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { aiAvailable, draftApplication, templateCoverLetter } from "./ai";
+import { applyDraft } from "./draft";
 import { autoFill, rememberAnswers } from "./fill";
 import { loadForm, PostingClosedError } from "./forms";
 import { scoreJob } from "./match";
@@ -105,13 +106,7 @@ export async function prepareApplication(jobId: string, byAutopilot = false): Pr
     try {
       const draft = await draftApplication(db.profile, job, open);
       coverLetter = draft.coverLetter;
-      const byKey = new Map(draft.answers.map((a) => [a.key, a]));
-      fields = fields.map((f) => {
-        const a = byKey.get(f.key);
-        if (!a || f.source !== "empty") return f;
-        const valid = !f.options?.length || a.value.split("\n").every((v) => f.options!.some((o) => o.label === v));
-        return a.value && valid ? { ...f, value: a.value, source: "ai", note: a.note || undefined } : { ...f, note: a.note || undefined };
-      });
+      fields = applyDraft(fields, draft.answers);
       log.push("Drafted the cover letter and open questions with Claude.");
     } catch (err) {
       log.push(`Claude could not draft answers: ${(err as Error).message}`);
