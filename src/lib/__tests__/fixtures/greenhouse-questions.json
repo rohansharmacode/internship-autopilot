@@ -1,0 +1,341 @@
+{
+ "questions": [
+  {
+   "description": null,
+   "label": "First Name",
+   "required": true,
+   "fields": [
+    {
+     "name": "first_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Last Name",
+   "required": true,
+   "fields": [
+    {
+     "name": "last_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Email",
+   "required": true,
+   "fields": [
+    {
+     "name": "email",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Phone",
+   "required": true,
+   "fields": [
+    {
+     "name": "phone",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Resume/CV",
+   "required": true,
+   "fields": [
+    {
+     "name": "resume",
+     "type": "input_file",
+     "values": []
+    },
+    {
+     "name": "resume_text",
+     "type": "textarea",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Preferred First Name",
+   "required": false,
+   "fields": [
+    {
+     "name": "question_19835361004",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": "<p>If you'd like to, please let us know your pronouns.</p>",
+   "label": "Pronouns",
+   "required": false,
+   "fields": [
+    {
+     "name": "question_19835362004",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "she/her/hers",
+       "value": 162179979004
+      },
+      {
+       "label": "he/him/his",
+       "value": 162179980004
+      },
+      {
+       "label": "they/them/theirs",
+       "value": 162179981004
+      },
+      {
+       "label": "self-describe",
+       "value": 162179982004
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "LinkedIn Profile",
+   "required": false,
+   "fields": [
+    {
+     "name": "question_19835363004",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Other Website",
+   "required": false,
+   "fields": [
+    {
+     "name": "question_19835364004",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "How did you connect with us?",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_19835365004",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "FigFest",
+       "value": 162179983004
+      },
+      {
+       "label": "Greylock Techfair",
+       "value": 162179984004
+      },
+      {
+       "label": "Through a partnership (RTC, ColorStack, or Talentboard)",
+       "value": 162179985004
+      },
+      {
+       "label": "On-campus event",
+       "value": 162179986004
+      },
+      {
+       "label": "Virtual event",
+       "value": 162179987004
+      },
+      {
+       "label": "Other",
+       "value": 162179988004
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "If you are currently enrolled in university or a program, what is your expected graduation date?",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_19835366004",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Spring 2027",
+       "value": 162179989004
+      },
+      {
+       "label": "Fall 2027",
+       "value": 162179990004
+      },
+      {
+       "label": "Spring 2028",
+       "value": 162179991004
+      },
+      {
+       "label": "Fall 2028",
+       "value": 162179992004
+      },
+      {
+       "label": "Spring 2029",
+       "value": 162179993004
+      },
+      {
+       "label": "Fall 2029",
+       "value": 162179994004
+      },
+      {
+       "label": "Spring 2030",
+       "value": 162179995004
+      },
+      {
+       "label": "Fall 2030",
+       "value": 162179996004
+      },
+      {
+       "label": "Other",
+       "value": 162179997004
+      },
+      {
+       "label": "I am not currently enrolled",
+       "value": 162179998004
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "From which US hub do you prefer to work?",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_19835367004",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "San Francisco",
+       "value": 162179999004
+      },
+      {
+       "label": "New York",
+       "value": 162180000004
+      },
+      {
+       "label": "Either",
+       "value": 162180001004
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "description": "<p>Please share 3-4 sentences on why you want to join Figma</p>",
+   "label": "Why do you want to join Figma?",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_19835368004",
+     "type": "textarea",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Are you authorized to work in the country for which you applied? ",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_19835369004",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Have you ever worked for Figma before, as an employee or a contractor/consultant? ",
+   "required": true,
+   "fields": [
+    {
+     "name": "question_19835370004",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "location_questions": [
+  {
+   "description": null,
+   "label": "Longitude",
+   "required": true,
+   "fields": [
+    {
+     "name": "longitude",
+     "type": "input_hidden",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Latitude",
+   "required": true,
+   "fields": [
+    {
+     "name": "latitude",
+     "type": "input_hidden",
+     "values": []
+    }
+   ]
+  },
+  {
+   "description": null,
+   "label": "Location",
+   "required": true,
+   "fields": [
+    {
+     "name": "location",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  }
+ ]
+}

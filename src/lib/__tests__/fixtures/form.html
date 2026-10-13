@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<body>
+<h1>Apply</h1>
+<form id="app" action="/thanks" method="get">
+  <label for="first_name">First Name</label><input id="first_name" type="text" required>
+  <label for="email">Email</label><input id="email" type="text" required>
+  <label id="question_1-label" for="question_1">Are you authorized to work?</label>
+  <div>
+    <input id="question_1" role="combobox" aria-labelledby="question_1-label" autocomplete="off">
+    <div id="question_1-list" role="listbox" hidden>
+      <div role="option" data-v="Yes">Yes</div>
+      <div role="option" data-v="No">No</div>
+    </div>
+    <input type="hidden" id="question_1-value" required>
+  </div>
+  <label for="resume">Resume</label><input id="resume" type="file" required>
+  <fieldset>
+    <legend>Will you need sponsorship?</legend>
+    <label><input type="radio" name="cards[abc][field0]" value="Yes" required> Yes</label>
+    <label><input type="radio" name="cards[abc][field0]" value="No"> No</label>
+  </fieldset>
+  <fieldset>
+    <legend>Languages</legend>
+    <label><input type="checkbox" name="cards[abc][field1]" value="English"> English</label>
+    <label><input type="checkbox" name="cards[abc][field1]" value="Hindi"> Hindi</label>
+    <label><input type="checkbox" name="cards[abc][field1]" value="French"> French</label>
+  </fieldset>
+  <label for="grad">Graduation year</label>
+  <select id="grad" name="grad"><option value="">Select</option><option>2026</option><option>2027</option></select>
+  <label for="why">Why us?</label><textarea id="why" name="why"></textarea>
+  <button type="submit">Submit application</button>
+</form>
+<script>
+  const box = document.getElementById('question_1');
+  const list = document.getElementById('question_1-list');
+  box.addEventListener('focus', () => { list.hidden = false; });
+  box.addEventListener('input', () => {
+    list.hidden = false;
+    for (const o of list.children) o.hidden = !o.textContent.toLowerCase().startsWith(box.value.toLowerCase());
+  });
+  list.addEventListener('click', (e) => {
+    const v = e.target.dataset.v; if (!v) return;
+    box.value = v; document.getElementById('question_1-value').value = v; list.hidden = true;
+  });
+  document.getElementById('app').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const ok = document.getElementById('question_1-value').value === 'Yes'
+      && document.getElementById('resume').files.length === 1
+      && document.querySelectorAll('input[name="cards[abc][field1]"]:checked').length === 2
+      && document.getElementById('grad').value === '2027'
+      && document.querySelector('input[name="cards[abc][field0]"]:checked')?.value === 'No'
+      && document.getElementById('why').value.length > 0;
+    document.body.innerHTML = ok ? '<p>Thank you for applying!</p>' : '<p role="alert">Something is missing</p>';
+  });
+</script>
+</body>
+</html>
