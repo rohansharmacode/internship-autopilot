@@ -67,7 +67,7 @@ export async function rescoreJobs(): Promise<void> {
 const DRAFTABLE = new Set<FormField["type"]>(["text", "textarea", "select", "multiselect"]);
 
 /** Loads the real application form for a job, fills it from the profile and drafts the rest. */
-export async function prepareApplication(jobId: string): Promise<Application> {
+export async function prepareApplication(jobId: string, byAutopilot = false): Promise<Application> {
   const db = await readDb();
   const already = db.applications.find((a) => a.jobId === jobId && a.status !== "skipped");
   if (already) return already;
@@ -115,7 +115,7 @@ export async function prepareApplication(jobId: string): Promise<Application> {
   );
 
   const now = new Date().toISOString();
-  const app: Application = { id: newId(), jobId, status: "draft", fields, coverLetter, createdAt: now, updatedAt: now, log };
+  const app: Application = { id: newId(), jobId, status: "draft", fields, coverLetter, createdAt: now, updatedAt: now, log, byAutopilot: byAutopilot || undefined };
   return updateDb((d) => {
     // Another request may have prepared the same job while this one was drafting.
     const raced = d.applications.find((a) => a.jobId === jobId && a.status !== "skipped");
@@ -126,34 +126,44 @@ export async function prepareApplication(jobId: string): Promise<Application> {
 }
 
 /** Progress of "Prepare the best matches", shown on the Applications page while it runs. */
-export const batch = { running: false, total: 0, done: 0, failed: [] as string[] };
+// Kept on globalThis because Next.js may load this module more than once in one server (pages and the autopilot clock).
+const shared = globalThis as typeof globalThis & {
+  __autopilotBatch?: { running: boolean; total: number; done: number; failed: string[] };
+  __autopilotSending?: Set<string>;
+};
+export const batch = (shared.__autopilotBatch ??= { running: false, total: 0, done: 0, failed: [] });
 
 export function autoApplicable(job: Job): boolean {
   return job.source !== "external";
 }
 
-/** Prepares drafts for the best-scoring internships you haven't looked at yet, one after another. */
-export async function prepareBest(count: number): Promise<number> {
-  if (batch.running) return 0;
-  const db = await readDb();
+export function bestUnseen(db: Awaited<ReturnType<typeof readDb>>, count: number): Job[] {
   const taken = new Set(db.applications.map((a) => a.jobId));
-  const picks = db.jobs
+  return db.jobs
     .filter((j) => !j.hidden && autoApplicable(j) && !taken.has(j.id) && (j.score ?? 0) >= db.profile.preferences.minScore)
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     .slice(0, count);
+}
+
+/** Prepares drafts for the best-scoring internships you haven't looked at yet, one after another. */
+export async function prepareBest(count: number, byAutopilot = false): Promise<{ started: number; finished: Promise<Application[]> }> {
+  if (batch.running) return { started: 0, finished: Promise.resolve([]) };
+  const picks = bestUnseen(await readDb(), count);
   Object.assign(batch, { running: true, total: picks.length, done: 0, failed: [] });
-  void (async () => {
+  const finished = (async () => {
+    const made: Application[] = [];
     for (const job of picks) {
       try {
-        await prepareApplication(job.id);
+        made.push(await prepareApplication(job.id, byAutopilot));
       } catch (err) {
         batch.failed.push(`${job.company}: ${(err as Error).message}`);
       }
       batch.done++;
     }
     batch.running = false;
+    return made;
   })();
-  return picks.length;
+  return { started: picks.length, finished };
 }
 
 export async function saveAnswers(id: string, values: Record<string, string>, coverLetter: string): Promise<void> {
@@ -205,7 +215,7 @@ function sentToday(apps: Application[]): number {
   return apps.filter((a) => a.status === "submitted" && a.submittedAt?.startsWith(today) && a.fields.length > 0).length;
 }
 
-const running = new Set<string>();
+const running = (shared.__autopilotSending ??= new Set<string>());
 let recovered = false;
 
 /** After a restart nothing is really sending any more, so those applications are handed back to you. */
@@ -227,15 +237,20 @@ export async function recoverInterrupted(): Promise<void> {
  * Returns an error message when it cannot start.
  */
 export async function sendApplication(id: string): Promise<string | null> {
+  return (await startSending(id)).error;
+}
+
+export async function startSending(id: string): Promise<{ error: string | null; done: Promise<unknown> }> {
+  const fail = (error: string) => ({ error, done: Promise.resolve() });
   const db = await readDb();
   const app = db.applications.find((a) => a.id === id);
   const job = app && db.jobs.find((j) => j.id === app.jobId);
-  if (!app || !job) return "Application not found.";
-  if (job.source === "external") return "The app can't fill in this site. Apply on the company's page.";
-  if (running.has(id)) return "It is already being sent.";
-  if (!db.profile.cv) return "Upload your CV on the Profile page first.";
+  if (!app || !job) return fail("Application not found.");
+  if (job.source === "external") return fail("The app can't fill in this site. Apply on the company's page.");
+  if (running.has(id)) return fail("It is already being sent.");
+  if (!db.profile.cv) return fail("Upload your CV on the Profile page first.");
   if (!db.settings.rehearsal && sentToday(db.applications) >= db.settings.dailyLimit) {
-    return `You've reached today's limit of ${db.settings.dailyLimit} applications. Change it in Settings.`;
+    return fail(`You've reached today's limit of ${db.settings.dailyLimit} applications. Change it in Settings.`);
   }
 
   running.add(id);
@@ -253,7 +268,7 @@ export async function sendApplication(id: string): Promise<string | null> {
   const screenshot = path.join(DATA_DIR, "screens", `${app.id}.png`);
   const source = job.source;
 
-  void fillAndSubmit({
+  const done = fillAndSubmit({
     source,
     url: job.applyUrl,
     fields: app.fields,
@@ -276,5 +291,9 @@ export async function sendApplication(id: string): Promise<string | null> {
       }),
     )
     .finally(() => running.delete(id));
-  return null;
+  return { error: null, done };
+}
+
+export function sentTodayCount(apps: Application[]): number {
+  return sentToday(apps);
 }

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { markSubmitted, saveApplication } from "@/app/actions";
+import { markSubmitted, saveApplication, saveOutcome } from "@/app/actions";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Flash } from "@/components/Flash";
 import { recoverInterrupted } from "@/lib/applications";
-import { STATUS_LABEL } from "@/lib/labels";
+import { OUTCOME_LABEL, STATUS_LABEL } from "@/lib/labels";
 import { readDb } from "@/lib/store";
 import type { FormField } from "@/lib/types";
 
@@ -90,6 +90,23 @@ export default async function ApplicationPage({ params, searchParams }: { params
         <strong className={`status-${app.status}`}>{STATUS_LABEL[app.status]}</strong>
       </div>
       <Flash msg={msg} />
+
+      {app.status === "submitted" && (
+        <form action={saveOutcome} className="card">
+          <input type="hidden" name="id" value={app.id} />
+          <div className="row">
+            <strong>What happened next?</strong>
+            <select name="outcome" defaultValue={app.outcome ?? "waiting"} style={{ maxWidth: 240 }}>
+              {Object.entries(OUTCOME_LABEL).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+          <label htmlFor="notes" style={{ marginTop: 8 }}>Notes (interview dates, contacts)</label>
+          <textarea id="notes" name="notes" defaultValue={app.notes ?? ""} />
+          <button style={{ marginTop: 8 }}>Save</button>
+        </form>
+      )}
 
       {app.status === "needs_you" && (
         <div className="card">

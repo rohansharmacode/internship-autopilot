@@ -45,6 +45,13 @@ export function emptyDb(): Db {
     profile: emptyProfile(),
     jobs: [],
     applications: [],
-    settings: { boards: DEFAULT_BOARDS, rehearsal: false, showBrowser: true, dailyLimit: 15, communityList: true },
+    settings: {
+      boards: DEFAULT_BOARDS,
+      rehearsal: false,
+      showBrowser: true,
+      dailyLimit: 15,
+      communityList: true,
+      autopilot: { enabled: false, everyHours: 6, prepareCount: 5, autoSend: false, autoSendMinScore: 60, log: [] },
+    },
   };
 }

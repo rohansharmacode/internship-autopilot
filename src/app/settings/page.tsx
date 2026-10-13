@@ -1,4 +1,6 @@
-import { addBoard, removeBoard, saveSettings } from "@/app/actions";
+import { addBoard, removeBoard, runAutopilotNow, saveAutopilot, saveSettings } from "@/app/actions";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { autopilotBusy } from "@/lib/autopilot";
 import { Flash } from "@/components/Flash";
 import { aiAvailable } from "@/lib/ai";
 import { readDb } from "@/lib/store";
@@ -8,8 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { msg } = await searchParams;
   const { settings: s } = await readDb();
+  const a = s.autopilot;
+  const busy = autopilotBusy();
   return (
     <>
+      <AutoRefresh active={busy} />
       <h1>Settings</h1>
       <Flash msg={msg} />
       <form action={saveSettings} className="card">
@@ -35,6 +40,34 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </p>
         <button className="primary">Save settings</button>
       </form>
+
+      <h2>Autopilot</h2>
+      <p className="small muted">
+        While the app is running, autopilot searches for internships on a schedule and prepares drafts for the best new matches.
+        It only sends on its own if you turn that on, and even then only applications where every required answer came from your
+        profile or from an answer you wrote before. Anything Claude wrote waits for you.
+      </p>
+      <form action={saveAutopilot} className="card">
+        <label className="inline">
+          <input type="checkbox" name="enabled" defaultChecked={a.enabled} /> Search and prepare drafts every{" "}
+          <input name="everyHours" type="number" min={1} max={48} defaultValue={a.everyHours} style={{ width: 70 }} /> hours, up to{" "}
+          <input name="prepareCount" type="number" min={1} max={25} defaultValue={a.prepareCount} style={{ width: 70 }} /> drafts each time
+        </label>
+        <br />
+        <label className="inline">
+          <input type="checkbox" name="autoSend" defaultChecked={a.autoSend} /> Send qualifying drafts without asking when the match score is at least{" "}
+          <input name="autoSendMinScore" type="number" min={0} max={100} defaultValue={a.autoSendMinScore} style={{ width: 70 }} />
+        </label>
+        <p className="small muted">
+          The daily limit and rehearsal mode above still apply. Last run: {a.lastRunAt ? a.lastRunAt.slice(0, 16).replace("T", " ") : "never"}
+          {busy ? " (running now)" : ""}.
+        </p>
+        <div className="row">
+          <button className="primary">Save autopilot</button>
+          <button formAction={runAutopilotNow} disabled={busy}>Run a round now</button>
+        </div>
+      </form>
+      {a.log.length > 0 && <pre className="log">{[...a.log].reverse().join("\n")}</pre>}
 
       <h2>Company job boards</h2>
       <p className="small muted">

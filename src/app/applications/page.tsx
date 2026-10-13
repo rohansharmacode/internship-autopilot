@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Flash } from "@/components/Flash";
 import { batch, recoverInterrupted } from "@/lib/applications";
-import { STATUS_LABEL } from "@/lib/labels";
+import { OUTCOME_LABEL, STATUS_LABEL } from "@/lib/labels";
 import { readDb } from "@/lib/store";
 import type { ApplicationStatus } from "@/lib/types";
 
@@ -20,8 +20,13 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   return (
     <>
       <AutoRefresh active={batch.running || apps.some((a) => a.status === "sending")} />
-      <h1>Applications</h1>
-      <p className="lead">Nothing is sent until you open a draft and approve it.</p>
+      <div className="spread">
+        <div>
+          <h1>Applications</h1>
+          <p className="lead">Nothing is sent until you open a draft and approve it.</p>
+        </div>
+        {apps.length > 0 && <a className="button" href="/export">Download as a spreadsheet</a>}
+      </div>
       <Flash msg={msg} />
       {batch.running && (
         <div className="card">
@@ -51,7 +56,10 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                 {a.status === "draft" && missing > 0 ? ` · ${missing} required answer${missing === 1 ? "" : "s"} missing` : ""}
               </div>
             </div>
-            <span className={`status-${a.status}`}>{STATUS_LABEL[a.status]}</span>
+            <span className={`status-${a.status}`}>
+              {a.status === "submitted" && a.outcome ? OUTCOME_LABEL[a.outcome] : STATUS_LABEL[a.status]}
+              {a.byAutopilot && <span className="tag">autopilot</span>}
+            </span>
           </Link>
         );
       })}

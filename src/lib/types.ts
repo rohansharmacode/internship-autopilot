@@ -109,6 +109,8 @@ export type ApplicationStatus =
   | "failed"
   | "skipped";
 
+export type Outcome = "waiting" | "interview" | "offer" | "rejected" | "withdrawn";
+
 export type Application = {
   id: string;
   jobId: string;
@@ -120,6 +122,11 @@ export type Application = {
   submittedAt?: string;
   log: string[];
   screenshot?: string;
+  /** What happened after you applied. You set this; the app can't read your inbox. */
+  outcome?: Outcome;
+  notes?: string;
+  /** True when autopilot prepared or sent it rather than you. */
+  byAutopilot?: boolean;
 };
 
 export type Board = { source: Source; token: string };
@@ -134,6 +141,22 @@ export type Settings = {
   /** Also pull internships from the SimplifyJobs community list on GitHub. */
   communityList: boolean;
   lastSearchAt?: string;
+  autopilot: AutopilotSettings;
+};
+
+export type AutopilotSettings = {
+  /** Search and prepare drafts on a schedule while the app is running. */
+  enabled: boolean;
+  everyHours: number;
+  prepareCount: number;
+  /**
+   * Also send drafts without asking, but only when every required answer came from your profile or
+   * your remembered answers (none written by Claude) and the match score is at least autoSendMinScore.
+   */
+  autoSend: boolean;
+  autoSendMinScore: number;
+  lastRunAt?: string;
+  log: string[];
 };
 
 export type Db = {

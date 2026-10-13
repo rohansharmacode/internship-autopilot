@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { existsSync, promises as fs } from "node:fs";
 import path from "node:path";
 import { chromium, type Locator, type Page } from "playwright";
 import type { Application, FormField, Source } from "./types";
@@ -170,6 +170,15 @@ async function validationErrors(page: Page): Promise<string[]> {
     )
     .catch(() => [] as string[]);
   return [...new Set(errs)];
+}
+
+/** Whether the browser the app drives has been downloaded (npm run browsers). */
+export function browserInstalled(): boolean {
+  try {
+    return existsSync(process.env.PLAYWRIGHT_CHROMIUM_PATH || chromium.executablePath());
+  } catch {
+    return false;
+  }
 }
 
 function escapeHtml(s: string): string {

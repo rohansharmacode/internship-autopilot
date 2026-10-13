@@ -8,11 +8,11 @@ export const dynamic = "force-dynamic";
 
 const PAGE = 60;
 
-type Params = { msg?: string; all?: string; q?: string; auto?: string; limit?: string };
+type Params = { msg?: string; all?: string; q?: string; auto?: string; limit?: string; sort?: string };
 
 export default async function JobsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
-  const { msg, all, q, auto } = params;
+  const { msg, all, q, auto, sort } = params;
   const limit = Math.max(PAGE, Number(params.limit) || PAGE);
   const db = await readDb();
   const appByJob = new Map(db.applications.map((a) => [a.jobId, a]));
@@ -21,7 +21,11 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
     .filter((j) => (all ? true : !j.hidden && (j.score ?? 0) >= db.profile.preferences.minScore))
     .filter((j) => !auto || j.source !== "external")
     .filter((j) => !needle || `${j.title} ${j.company} ${j.location}`.toLowerCase().includes(needle))
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.postedAt.localeCompare(a.postedAt));
+    .sort((a, b) =>
+      sort === "new"
+        ? b.postedAt.localeCompare(a.postedAt)
+        : (b.score ?? 0) - (a.score ?? 0) || b.postedAt.localeCompare(a.postedAt),
+    );
   const jobs = matching.slice(0, limit);
   const fillable = db.jobs.filter((j) => j.source !== "external").length;
   const more = new URLSearchParams(Object.entries({ ...params, msg: "", limit: String(limit + PAGE) }).filter(([, v]) => v) as [string, string][]);
@@ -32,7 +36,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
         <div>
           <h1>Internships</h1>
           <p className="lead">
-            {db.jobs.length} open internships, {fillable} of them on sites the app can fill in. Best matches first.
+            {db.jobs.length} open internships, {fillable} of them on sites the app can fill in. 
             {db.settings.lastSearchAt && ` Last searched ${db.settings.lastSearchAt.slice(0, 16).replace("T", " ")}.`}
           </p>
         </div>
@@ -58,6 +62,10 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
         <label className="inline">
           <input type="checkbox" name="all" value="1" defaultChecked={Boolean(all)} /> Include hidden and low scores
         </label>
+        <select name="sort" defaultValue={sort ?? ""} style={{ width: 150 }}>
+          <option value="">Best match</option>
+          <option value="new">Newest</option>
+        </select>
         <button type="submit">Filter</button>
       </form>
       {jobs.length === 0 && <p className="muted">Nothing to show yet. Search for internships, or lower the minimum score on your profile.</p>}

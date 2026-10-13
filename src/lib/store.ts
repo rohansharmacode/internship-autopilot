@@ -23,7 +23,7 @@ export async function readDb(): Promise<Db> {
         answers: { ...base.profile.answers, ...raw.profile?.answers },
         preferences: { ...base.profile.preferences, ...raw.profile?.preferences },
       },
-      settings: { ...base.settings, ...raw.settings },
+      settings: { ...base.settings, ...raw.settings, autopilot: { ...base.settings.autopilot, ...raw.settings?.autopilot } },
     };
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return emptyDb();

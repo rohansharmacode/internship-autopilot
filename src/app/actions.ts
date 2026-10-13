@@ -7,8 +7,9 @@ import { prepareApplication, prepareBest, recordManualApplication, refreshJobs, 
 import { contactsFromText, importGithub, pdfToText } from "@/lib/profile-import";
 import { mergeSkills } from "@/lib/skills";
 import { boardFromUrl } from "@/lib/sources";
+import { runAutopilot } from "@/lib/autopilot";
 import { readDb, saveFile, updateDb } from "@/lib/store";
-import type { Profile, Source, YesNo } from "@/lib/types";
+import type { Outcome, Profile, Source, YesNo } from "@/lib/types";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const list = (s: string) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
@@ -132,7 +133,7 @@ export async function refreshJobsAction() {
 }
 
 export async function prepareBestAction(fd: FormData) {
-  const n = await prepareBest(Math.min(25, Math.max(1, Number(str(fd, "count")) || 5)));
+  const { started: n } = await prepareBest(Math.min(25, Math.max(1, Number(str(fd, "count")) || 5)));
   back("/applications", n ? `Preparing ${n} application${n === 1 ? "" : "s"}. Each one waits here for your approval.` : "Nothing new to prepare. Search for internships or lower your minimum score.");
 }
 
@@ -239,4 +240,36 @@ export async function removeBoard(fd: FormData) {
     db.settings.boards = db.settings.boards.filter((b) => !(b.source === source && b.token === token));
   });
   back("/settings", `Removed ${token}.`);
+}
+
+export async function saveAutopilot(fd: FormData) {
+  await updateDb((db) => {
+    const a = db.settings.autopilot;
+    a.enabled = fd.get("enabled") === "on";
+    a.autoSend = fd.get("autoSend") === "on";
+    a.everyHours = Math.min(48, Math.max(1, Number(str(fd, "everyHours")) || 6));
+    a.prepareCount = Math.min(25, Math.max(1, Number(str(fd, "prepareCount")) || 5));
+    a.autoSendMinScore = Math.min(100, Math.max(0, Number(str(fd, "autoSendMinScore")) || 60));
+  });
+  back("/settings", "Autopilot settings saved.");
+}
+
+export async function runAutopilotNow() {
+  void runAutopilot();
+  back("/settings", "Autopilot is running a round now. Its log below updates as it goes.");
+}
+
+const OUTCOMES: Outcome[] = ["waiting", "interview", "offer", "rejected", "withdrawn"];
+
+export async function saveOutcome(fd: FormData) {
+  const id = str(fd, "id");
+  const outcome = str(fd, "outcome") as Outcome;
+  await updateDb((db) => {
+    const a = db.applications.find((x) => x.id === id);
+    if (!a) return;
+    a.outcome = OUTCOMES.includes(outcome) ? outcome : undefined;
+    a.notes = str(fd, "notes");
+    a.updatedAt = new Date().toISOString();
+  });
+  back(`/applications/${id}`, "Saved.");
 }

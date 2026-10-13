@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { aiAvailable } from "@/lib/ai";
 import { readDb } from "@/lib/store";
+import { browserInstalled } from "@/lib/submit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,11 @@ export default async function Overview() {
       <p className="lead">
         The app finds internships on company job boards, fills each application from your profile, and sends it only after you approve it.
       </p>
+      {!browserInstalled() && (
+        <div className="flash">
+          The browser the app uses to fill in forms isn&apos;t installed yet. Stop the app, run <code>npm run browsers</code>, and start it again.
+        </div>
+      )}
       <div className="card">
         <ol className="steps">
           {steps.map((s, i) => (
@@ -47,6 +53,11 @@ export default async function Overview() {
           </div>
         ))}
       </div>
+      <p className="small muted">
+        Autopilot is {db.settings.autopilot.enabled ? `on, every ${db.settings.autopilot.everyHours} hours${db.settings.autopilot.autoSend ? ", sending drafts that qualify" : ", preparing drafts for you to approve"}` : "off"}.{" "}
+        <Link href="/settings">Change it</Link>.
+        {" "}{db.applications.filter((a) => a.outcome === "interview").length > 0 && `${db.applications.filter((a) => a.outcome === "interview").length} interviewing.`}
+      </p>
       {top.length > 0 && (
         <>
           <h2>Best matches you haven&apos;t applied to</h2>

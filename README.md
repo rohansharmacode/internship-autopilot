@@ -41,6 +41,14 @@ Then:
 2. **Internships**: press *Search for new internships*. Hide the ones you don't want.
 3. Press *Prepare application* on one, check the answers, and press *Approve and send*.
 
+After applying, set each application's outcome (interviewing, offer, rejected) and keep notes. *Download as
+a spreadsheet* on the Applications page exports everything.
+
+**Autopilot** (Settings, off by default) searches on a schedule while the app is running and prepares
+drafts for the best new matches. If you also let it send, it only sends applications where every required
+answer came from your profile or from an answer you wrote before. Anything Claude wrote, anything missing,
+and anything below your chosen match score waits for you. The daily limit still applies.
+
 Turn on **Rehearsal mode** in Settings to watch it fill forms without ever pressing Submit. That's a
 good way to try it first.
 
