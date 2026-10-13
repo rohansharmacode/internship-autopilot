@@ -44,25 +44,32 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
           No applications yet. Pick one from <Link href="/jobs">Internships</Link>.
         </p>
       )}
-      {apps.map((a) => {
-        const job = jobs.get(a.jobId);
-        const missing = a.fields.filter((f) => f.required && !f.value).length;
-        return (
-          <Link key={a.id} href={`/applications/${a.id}`} className="card spread" style={{ display: "flex", color: "inherit", textDecoration: "none" }}>
-            <div>
-              <strong>{job?.title ?? "Closed posting"}</strong> · {job?.company}
-              <div className="small muted">
-                Updated {a.updatedAt.slice(0, 16).replace("T", " ")}
-                {a.status === "draft" && missing > 0 ? ` · ${missing} required answer${missing === 1 ? "" : "s"} missing` : ""}
-              </div>
-            </div>
-            <span className={`status-${a.status}`}>
-              {a.status === "submitted" && a.outcome ? OUTCOME_LABEL[a.outcome] : STATUS_LABEL[a.status]}
-              {a.byAutopilot && <span className="tag">autopilot</span>}
-            </span>
-          </Link>
-        );
-      })}
+      {apps.length > 0 && (
+        <div className="panel">
+          {apps.map((a) => {
+            const job = jobs.get(a.jobId);
+            const missing = a.fields.filter((f) => f.required && !f.value).length;
+            return (
+              <Link key={a.id} href={`/applications/${a.id}`} className="panel-row">
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontWeight: 600 }}>{job?.company ?? "Closed posting"}</div>
+                  <div className="small muted">
+                    {job?.title}
+                    {a.status === "draft" && missing > 0 ? ` · ${missing} required answer${missing === 1 ? "" : "s"} missing` : ""}
+                  </div>
+                </div>
+                <div className="row">
+                  {a.byAutopilot && <span className="tag">autopilot</span>}
+                  <span className="small muted">{a.updatedAt.slice(0, 10)}</span>
+                  <span className={`status status-${a.status}`}>
+                    {a.status === "submitted" && a.outcome ? OUTCOME_LABEL[a.outcome] : STATUS_LABEL[a.status]}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

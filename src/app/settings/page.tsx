@@ -31,6 +31,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <a href="https://github.com/SimplifyJobs/Summer2026-Internships" target="_blank" rel="noreferrer">SimplifyJobs internship list</a>{" "}
           (thousands of internships, updated daily)
         </label>
+        <br />
+        <label className="inline">
+          <input type="checkbox" name="simplytkTracker" defaultChecked={s.simplytkTracker} /> Also search the{" "}
+          <a href="https://simplytk.com/internship-tracker" target="_blank" rel="noreferrer">simplytk.com tracker</a>{" "}
+          (UK internships, spring weeks and placements)
+        </label>
         <div style={{ maxWidth: 220, marginTop: 12 }}>
           <label htmlFor="dailyLimit">Most applications to send per day</label>
           <input id="dailyLimit" name="dailyLimit" type="number" min={1} defaultValue={s.dailyLimit} />

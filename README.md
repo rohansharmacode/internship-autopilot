@@ -3,9 +3,11 @@
 A web app that runs on your own computer. You give it your details once (CV, LinkedIn, GitHub and the
 standard questions every application asks). Then it:
 
-1. **Finds internships** on company job boards (Greenhouse, Lever and Ashby) and in the
-   [SimplifyJobs community list](https://github.com/SimplifyJobs/Summer2026-Internships) (about 4,500 open
-   internships, updated daily). It ranks them against your skills, the title keywords you care about,
+1. **Finds internships** on company job boards (Greenhouse, Lever and Ashby), in the
+   [simplytk.com tracker](https://simplytk.com/internship-tracker) (UK internships, spring weeks, placements
+   and off-cycle roles) and in the [SimplifyJobs community list](https://github.com/SimplifyJobs/Summer2026-Internships)
+   (about 4,500 open internships, updated daily). You can also paste in any posting's link, for example one
+   you found on Trackr. It ranks them against your skills, the title keywords you care about,
    where you want to work and, if you need a visa, whether the company sponsors.
 2. **Prepares each application** from the employer's real form. Your profile fills the standard
    questions, and Claude drafts a cover letter and answers to the company's own questions. Claude only
@@ -64,6 +66,8 @@ good way to try it first.
 | Ashby | Yes | Yes | The app reads the live form, including Yes/No buttons, radio lists and checklists. |
 | LinkedIn | No | No | Used only as a source for your profile. LinkedIn's terms forbid automated applying and accounts get restricted. |
 | Workday and other company sites | Yes, via the community list | No | Listed with an *Apply on site* link; press *I applied* to track it. Each Workday site needs its own account. |
+| simplytk.com tracker | Yes | Where the posting is on Greenhouse, Lever or Ashby | About 800 UK openings. Graduate jobs are left out. |
+| Trackr | No | No | Its terms forbid pulling listings automatically. Paste a posting's Apply link into *Add one from a link* instead. |
 | Indeed, Handshake, Glassdoor | No | No | Their terms forbid bots. |
 
 Lots of companies hire interns through Greenhouse, Lever or Ashby. The app ships with a starter list

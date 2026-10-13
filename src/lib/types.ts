@@ -74,8 +74,8 @@ export type Job = {
   fetchedAt: string;
   /** What the listing says about visa sponsorship, when known. */
   sponsorship?: string;
-  /** Which feed found it: a company's own job board, or the community internship list. */
-  via: "board" | "community";
+  /** Which feed found it: a company's own job board, the community internship list, the simplytk.com tracker, or a link you pasted in. */
+  via: "board" | "community" | "tracker" | "link";
   firstSeenAt?: string;
   score?: number;
   reasons?: string[];
@@ -141,6 +141,8 @@ export type Settings = {
   dailyLimit: number;
   /** Also pull internships from the SimplifyJobs community list on GitHub. */
   communityList: boolean;
+  /** Also read simplytk.com's tracker of UK internships, spring weeks and placements. */
+  simplytkTracker: boolean;
   lastSearchAt?: string;
   autopilot: AutopilotSettings;
 };

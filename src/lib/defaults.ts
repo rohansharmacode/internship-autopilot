@@ -52,6 +52,7 @@ export function emptyDb(): Db {
       showBrowser: true,
       dailyLimit: 15,
       communityList: true,
+      simplytkTracker: true,
       autopilot: { enabled: false, everyHours: 6, prepareCount: 5, autoSend: false, autoSendMinScore: 60, log: [] },
     },
   };

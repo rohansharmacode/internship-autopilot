@@ -1,26 +1,22 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import { Nav } from "@/components/Nav";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Internship Autopilot",
   description: "Finds internships, fills in applications from your profile, and sends each one after you approve it.",
 };
 
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>
-        <header className="top">
-          <strong>Internship Autopilot</strong>
-          <nav>
-            <Link href="/">Overview</Link>
-            <Link href="/profile">Profile</Link>
-            <Link href="/jobs">Internships</Link>
-            <Link href="/applications">Applications</Link>
-            <Link href="/settings">Settings</Link>
-          </nav>
-        </header>
+        <Nav />
         <main>{children}</main>
       </body>
     </html>

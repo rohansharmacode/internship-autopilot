@@ -8,6 +8,8 @@ import { prepareApplication, prepareBest, recordManualApplication, refreshJobs, 
 import { contactsFromText, importGithub, pdfToText } from "@/lib/profile-import";
 import { mergeSkills } from "@/lib/skills";
 import { boardFromUrl } from "@/lib/sources";
+import { jobFromLink, LinkError } from "@/lib/sources/link";
+import { scoreJob } from "@/lib/match";
 import { runAutopilot } from "@/lib/autopilot";
 import { autoFill } from "@/lib/fill";
 import { PRACTICE_FIELDS } from "@/lib/practice";
@@ -136,6 +138,22 @@ export async function refreshJobsAction() {
   back("/jobs", `Found ${r.added} new internship${r.added === 1 ? "" : "s"} (${r.total} listed).${errs}`);
 }
 
+export async function addJobFromLink(fd: FormData) {
+  let job;
+  try {
+    job = await jobFromLink(str(fd, "url"));
+  } catch (err) {
+    back("/jobs", err instanceof LinkError ? err.message : `Couldn't read that link: ${(err as Error).message}`);
+  }
+  await updateDb((db) => {
+    const prev = db.jobs.find((j) => j.id === job.id);
+    const merged = { ...job, firstSeenAt: prev?.firstSeenAt ?? job.fetchedAt, hidden: false };
+    db.jobs = [{ ...merged, ...scoreJob(merged, db.profile) }, ...db.jobs.filter((j) => j.id !== job.id)];
+  });
+  const how = job.source === "external" ? "You apply to this one on their site; press I applied afterwards to track it." : "The app can fill this one in. Press Prepare application.";
+  redirect(`/jobs?all=1&q=${encodeURIComponent(job.title)}&msg=${encodeURIComponent(`Added ${job.title} at ${job.company}. ${how}`)}`);
+}
+
 export async function prepareBestAction(fd: FormData) {
   const { started: n } = await prepareBest(Math.min(25, Math.max(1, Number(str(fd, "count")) || 5)));
   back("/applications", n ? `Preparing ${n} application${n === 1 ? "" : "s"}. Each one waits here for your approval.` : "Nothing new to prepare. Search for internships or lower your minimum score.");
@@ -222,6 +240,7 @@ export async function saveSettings(fd: FormData) {
   await updateDb((db) => {
     db.settings.rehearsal = fd.get("rehearsal") === "on";
     db.settings.communityList = fd.get("communityList") === "on";
+    db.settings.simplytkTracker = fd.get("simplytkTracker") === "on";
     db.settings.showBrowser = fd.get("showBrowser") === "on";
     db.settings.dailyLimit = Math.max(1, Number(str(fd, "dailyLimit")) || 15);
   });

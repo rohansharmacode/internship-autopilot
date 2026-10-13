@@ -57,7 +57,7 @@ function Field({ f, hasCv }: { f: FormField; hasCv: boolean }) {
     <div className="field">
       <label htmlFor={id}>
         {f.label} {f.required && <span className="req">*</span>}
-        {SOURCE_TAG[f.source] && <span className="tag">{SOURCE_TAG[f.source]}</span>}
+        {SOURCE_TAG[f.source] && <span className={f.source === "ai" ? "tag ai" : "tag"}>{SOURCE_TAG[f.source]}</span>}
       </label>
       {input}
       {f.note && <div className="note">{f.note}</div>}
@@ -81,13 +81,14 @@ export default async function ApplicationPage({ params, searchParams }: { params
       <Link href="/applications" className="small">← Applications</Link>
       <div className="spread">
         <div>
+          <p className="eyebrow" style={{ marginTop: 16 }}>{job?.company}</p>
           <h1>{job?.title ?? "Closed posting"}</h1>
           <p className="lead">
-            {job?.company} · {job?.location} · <a href={job?.url} target="_blank" rel="noreferrer">posting</a> ·{" "}
+            {job?.location || "Location not stated"} · <a href={job?.url} target="_blank" rel="noreferrer">posting</a> ·{" "}
             <a href={job?.applyUrl} target="_blank" rel="noreferrer">application page</a>
           </p>
         </div>
-        <strong className={`status-${app.status}`}>{STATUS_LABEL[app.status]}</strong>
+        <span className={`status status-${app.status}`}>{STATUS_LABEL[app.status]}</span>
       </div>
       <Flash msg={msg} />
 
@@ -127,7 +128,7 @@ export default async function ApplicationPage({ params, searchParams }: { params
         <input type="hidden" name="id" value={app.id} />
         <fieldset disabled={locked} style={{ border: 0, padding: 0, margin: 0 }}>
           <div className="card">
-            <strong>Application form</strong>
+            <h3>Application form</h3>
             <p className="small muted">These are the questions on the real form. Required ones are marked *.</p>
             {app.fields.map((f) => (
               <Field key={f.key} f={f} hasCv={Boolean(db.profile.cv)} />
@@ -137,18 +138,18 @@ export default async function ApplicationPage({ params, searchParams }: { params
             <label htmlFor="coverLetter">Cover letter</label>
             <textarea id="coverLetter" name="coverLetter" defaultValue={app.coverLetter} style={{ minHeight: 260 }} />
           </div>
-          <div className="row">
+          {missing.length > 0 && (
+            <p className="flash warn small">
+              {missing.length} required answer{missing.length === 1 ? " is" : "s are"} empty: {missing.map((f) => f.label).join("; ")}. The form will likely be rejected until you fill {missing.length === 1 ? "it" : "them"}.
+            </p>
+          )}
+          <div className="row actions-bar">
             <button type="submit" name="intent" value="send" className="primary">
               {db.settings.rehearsal ? "Rehearse (fill without submitting)" : "Approve and send"}
             </button>
             <button type="submit" name="intent" value="save">Save changes</button>
             <button type="submit" name="intent" value="skip">Skip this one</button>
           </div>
-          {missing.length > 0 && (
-            <p className="small" style={{ color: "var(--warn)" }}>
-              {missing.length} required answer{missing.length === 1 ? " is" : "s are"} empty: {missing.map((f) => f.label).join("; ")}. The form will likely be rejected until you fill {missing.length === 1 ? "it" : "them"}.
-            </p>
-          )}
         </fieldset>
       </form>
       )}

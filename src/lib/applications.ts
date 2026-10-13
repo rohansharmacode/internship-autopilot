@@ -7,6 +7,7 @@ import { loadForm, PostingClosedError } from "./forms";
 import { scoreJob } from "./match";
 import { fetchAllBoards } from "./sources";
 import { fetchCommunityList } from "./sources/community";
+import { fetchSimplytk } from "./sources/simplytk";
 import { loadDescription } from "./sources/describe";
 import { DATA_DIR, FILES_DIR, newId, readDb, updateDb } from "./store";
 import { fillAndSubmit, writeCoverLetterPdf } from "./submit";
@@ -14,7 +15,7 @@ import type { Application, FormField, Job } from "./types";
 
 export async function refreshJobs(): Promise<{ added: number; total: number; errors: string[] }> {
   const { settings } = await readDb();
-  const [boards, community] = await Promise.all([
+  const [boards, community, tracker] = await Promise.all([
     fetchAllBoards(settings.boards),
     settings.communityList
       ? fetchCommunityList().then(
@@ -22,12 +23,19 @@ export async function refreshJobs(): Promise<{ added: number; total: number; err
           (err: Error) => ({ jobs: [] as Job[], error: `community list: ${err.message}` }),
         )
       : Promise.resolve({ jobs: [] as Job[], error: null }),
+    settings.simplytkTracker
+      ? fetchSimplytk().then(
+          (jobs) => ({ jobs, error: null as string | null }),
+          (err: Error) => ({ jobs: [] as Job[], error: `simplytk tracker: ${err.message}` }),
+        )
+      : Promise.resolve({ jobs: [] as Job[], error: null }),
   ]);
-  const errors = [...boards.errors, ...(community.error ? [community.error] : [])];
+  const errors = [...boards.errors, ...[community.error, tracker.error].filter((e): e is string => Boolean(e))];
 
   // A company's own board has the full description, so it wins over the community copy of the same posting.
   const fresh = new Map<string, Job>();
   for (const j of community.jobs) fresh.set(j.id, j);
+  for (const j of tracker.jobs) fresh.set(j.id, j);
   for (const j of boards.jobs) fresh.set(j.id, j);
 
   return updateDb((db) => {
@@ -45,14 +53,20 @@ export async function refreshJobs(): Promise<{ added: number; total: number; err
       };
       existing.set(job.id, { ...merged, ...scoreJob(merged, db.profile) });
     }
-    // Postings that disappeared are closed; keep them only if you applied, or if their feed failed this time.
+    // Postings that disappeared are closed; keep them only if you applied, if their feed failed this time,
+    // or if you added them yourself from a link.
     const applied = new Set(db.applications.map((a) => a.jobId));
     const failed = new Set(errors.map((e) => e.split(":")[0]));
     db.jobs = [...existing.values()].filter(
       (j) =>
         fresh.has(j.id) ||
         applied.has(j.id) ||
-        (j.via === "community" ? failed.has("community list") : failed.has(`${j.source}/${j.board}`)),
+        j.via === "link" ||
+        (j.via === "community"
+          ? failed.has("community list")
+          : j.via === "tracker"
+            ? failed.has("simplytk tracker")
+            : failed.has(`${j.source}/${j.board}`)),
     );
     db.settings.lastSearchAt = now;
     return { added, total: db.jobs.length, errors };
