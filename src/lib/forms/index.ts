@@ -1,7 +1,11 @@
 import type { FormField, Job } from "../types";
+
 import { ashbyStandardForm, scrapeAshbyForm } from "./ashby";
+import { PostingClosedError } from "./closed";
 import { loadGreenhouseForm } from "./greenhouse";
 import { loadLeverForm } from "./lever";
+
+export { PostingClosedError };
 
 export async function loadForm(job: Job): Promise<FormField[]> {
   switch (job.source) {
@@ -13,7 +17,8 @@ export async function loadForm(job: Job): Promise<FormField[]> {
       try {
         const fields = await scrapeAshbyForm(job.applyUrl);
         if (fields.length) return fields;
-      } catch {
+      } catch (err) {
+        if (err instanceof PostingClosedError) throw err;
         // Fall back to the fields every Ashby form has; the rest are left for you in the browser.
       }
       return ashbyStandardForm();

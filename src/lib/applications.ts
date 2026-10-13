@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { aiAvailable, draftApplication, templateCoverLetter } from "./ai";
 import { autoFill, rememberAnswers } from "./fill";
-import { loadForm } from "./forms";
+import { loadForm, PostingClosedError } from "./forms";
 import { scoreJob } from "./match";
 import { fetchAllBoards } from "./sources";
 import { fetchCommunityList } from "./sources/community";
@@ -75,7 +75,18 @@ export async function prepareApplication(jobId: string, byAutopilot = false): Pr
   if (!job) throw new Error("That internship is no longer listed.");
 
   const log: string[] = [];
-  let fields = autoFill(await loadForm(job), db.profile);
+  let form: FormField[];
+  try {
+    form = await loadForm(job);
+  } catch (err) {
+    if (err instanceof PostingClosedError) {
+      await updateDb((d) => {
+        d.jobs = d.jobs.filter((j) => j.id !== jobId);
+      });
+    }
+    throw err;
+  }
+  let fields = autoFill(form, db.profile);
   let coverLetter = "";
 
   if (job.description.length < 200) {
@@ -255,7 +266,22 @@ export async function startSending(id: string): Promise<{ error: string | null; 
 
   running.add(id);
   await setStatus(id, "sending");
+  const done = launchSend(app, job, db.profile.cv.storedPath, db).catch((err: Error) =>
+    updateDb((d) => {
+      running.delete(id);
+      const a = d.applications.find((x) => x.id === id);
+      if (a) {
+        a.status = "needs_you";
+        a.log.push(`Could not start sending: ${err.message}`);
+      }
+    }),
+  );
+  return { error: null, done };
+}
 
+async function launchSend(app: Application, job: Job, resume: string, db: Awaited<ReturnType<typeof readDb>>): Promise<unknown> {
+  const id = app.id;
+  if (job.source === "external") throw new Error("This site can't be filled in.");
   await fs.mkdir(FILES_DIR, { recursive: true });
   const name = `${db.profile.firstName} ${db.profile.lastName} cover letter ${job.company}`.trim().replace(/[^\w -]+/g, "").replace(/\s+/g, "-");
   let coverPath = path.join(FILES_DIR, `${name}.pdf`);
@@ -271,8 +297,10 @@ export async function startSending(id: string): Promise<{ error: string | null; 
   const done = fillAndSubmit({
     source,
     url: job.applyUrl,
+    fallbackUrl:
+      source === "greenhouse" ? `https://job-boards.greenhouse.io/embed/job_app?for=${job.board}&token=${job.externalId}` : undefined,
     fields: app.fields,
-    files: { resume: db.profile.cv.storedPath, cover_letter: coverPath },
+    files: { resume, cover_letter: coverPath },
     rehearsal: db.settings.rehearsal,
     headed: db.settings.showBrowser,
     screenshotPath: screenshot,
@@ -291,7 +319,7 @@ export async function startSending(id: string): Promise<{ error: string | null; 
       }),
     )
     .finally(() => running.delete(id));
-  return { error: null, done };
+  return done;
 }
 
 export function sentTodayCount(apps: Application[]): number {

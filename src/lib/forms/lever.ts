@@ -1,4 +1,5 @@
 import { decodeEntities } from "../text";
+import { PostingClosedError } from "./closed";
 import type { FieldType, FormField } from "../types";
 
 const STANDARD: FormField[] = [
@@ -63,6 +64,7 @@ export function parseLeverApplyPage(html: string): FormField[] {
 
 export async function loadLeverForm(applyUrl: string): Promise<FormField[]> {
   const res = await fetch(applyUrl);
+  if (res.status === 404) throw new PostingClosedError();
   if (!res.ok) throw new Error(`Could not load the Lever form (${res.status})`);
   return parseLeverApplyPage(await res.text());
 }

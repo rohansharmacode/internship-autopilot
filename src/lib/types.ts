@@ -31,6 +31,7 @@ export type Profile = {
   email: string;
   phone: string;
   city: string;
+  postalCode: string;
   country: string;
   school: string;
   degree: string;

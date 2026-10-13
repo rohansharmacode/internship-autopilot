@@ -15,6 +15,7 @@ export function emptyProfile(): Profile {
     email: "",
     phone: "",
     city: "",
+    postalCode: "",
     country: "",
     school: "",
     degree: "",

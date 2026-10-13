@@ -76,6 +76,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <Text name="email" label="Email" value={p.email} type="email" />
           <Text name="phone" label="Phone" value={p.phone} />
           <Text name="city" label="City" value={p.city} />
+          <Text name="postalCode" label="Postcode / ZIP" value={p.postalCode} />
           <Text name="country" label="Country" value={p.country} />
           <Text name="linkedinUrl" label="LinkedIn URL" value={p.linkedinUrl} />
           <Text name="githubUsername" label="GitHub username" value={p.githubUsername} />

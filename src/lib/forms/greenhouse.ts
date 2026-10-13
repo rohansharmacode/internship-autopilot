@@ -1,3 +1,4 @@
+import { PostingClosedError } from "./closed";
 import type { FieldType, FormField } from "../types";
 
 type GhField = { name: string; type: string; values: { label: string; value: string | number }[] };
@@ -38,6 +39,7 @@ export function parseGreenhouseQuestions(body: {
 
 export async function loadGreenhouseForm(board: string, jobId: string): Promise<FormField[]> {
   const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${jobId}?questions=true`);
+  if (res.status === 404) throw new PostingClosedError();
   if (!res.ok) throw new Error(`Could not load the Greenhouse form (${res.status})`);
   return parseGreenhouseQuestions(await res.json());
 }

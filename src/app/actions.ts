@@ -32,7 +32,7 @@ function fillBlanks(profile: Profile, found: Partial<Profile>): void {
 export async function saveProfile(fd: FormData) {
   await updateDb((db) => {
     const p = db.profile;
-    for (const k of ["firstName", "lastName", "email", "phone", "city", "country", "school", "degree", "major", "graduationDate", "gpa", "linkedinUrl", "githubUsername", "portfolioUrl", "summary"] as const) {
+    for (const k of ["firstName", "lastName", "email", "phone", "city", "postalCode", "country", "school", "degree", "major", "graduationDate", "gpa", "linkedinUrl", "githubUsername", "portfolioUrl", "summary"] as const) {
       p[k] = str(fd, k);
     }
     p.skills = mergeSkills(list(str(fd, "skills")));

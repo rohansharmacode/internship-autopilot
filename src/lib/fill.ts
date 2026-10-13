@@ -41,7 +41,7 @@ const RULES: Rule[] = [
   { test: /start date|earliest.*start|when can you start|available to start|availability/, get: (p) => p.answers.earliestStart },
   { test: /how (did )?you (hear|heard|find|found|connect|learn|learned)|where did you (hear|find)|referral source|^source$/, get: (p) => p.answers.howDidYouHear },
   {
-    test: /(worked|employed) (for|at|with) .* before|previously (worked|been employed)|former employee|ever worked for/,
+    test: /(worked|employed) (for|at|with) .* before|previously (worked|been employed)|former employee|ever worked for|have you (ever )?been employed by/,
     get: () => ({ value: "No", note: "Assumed you have not worked there before. Change it if you have." }),
   },
   { test: /graduat.*year|year of graduation|class of/, get: (p) => gradParts(p.graduationDate).year },
@@ -53,6 +53,7 @@ const RULES: Rule[] = [
   { test: /major|discipline|field of study|area of study|concentration/, get: (p) => p.major },
   { test: /current (company|employer|organi[sz]ation)|^org$/, get: (p) => p.school },
   { test: /^location|city|where are you (currently )?(based|located)|current location|^location$/, get: (p) => [p.city, p.country].filter(Boolean).join(", ") },
+  { test: /\bzip\b|postal code|postcode/, get: (p) => p.postalCode },
   { test: /country/, get: (p) => p.country },
 ];
 
@@ -61,9 +62,9 @@ export function chooseOption(options: FieldOption[], wanted: string): FieldOptio
   const w = normalise(wanted);
   if (!w) return null;
   const by = (pred: (o: string) => boolean) => options.find((o) => pred(normalise(o.label)));
+  if (w === "yes" || w === "no") return by((o) => o === w || o.startsWith(`${w} `)) ?? null;
   return (
     by((o) => o === w) ??
-    (w === "yes" || w === "no" ? by((o) => o.startsWith(`${w} `) || o.startsWith(w)) : undefined) ??
     by((o) => o.startsWith(w)) ??
     by((o) => w.length > 3 && o.includes(w)) ??
     by((o) => o.length > 3 && w.includes(o)) ??

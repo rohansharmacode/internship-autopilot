@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import type { FormField } from "../types";
+import { PostingClosedError } from "./closed";
 
 /** The fields every Ashby form has, used if the live form can't be read. */
 export function ashbyStandardForm(): FormField[] {
@@ -32,7 +33,10 @@ export async function scrapeAshbyForm(applyUrl: string): Promise<FormField[]> {
   try {
     const page = await browser.newPage();
     await page.goto(applyUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
-    await page.locator(".ashby-application-form-field-entry").first().waitFor({ timeout: 20000 });
+    const form = page.locator(".ashby-application-form-field-entry").first();
+    const gone = page.getByText("The job you requested was not found");
+    await form.or(gone).first().waitFor({ timeout: 20000 });
+    if (await gone.count()) throw new PostingClosedError();
     const scraped: Scraped[] = await page.evaluate(() =>
       [...document.querySelectorAll(".ashby-application-form-field-entry, fieldset")].flatMap((entry) => {
         const label = entry.querySelector("label, legend") as HTMLLabelElement | null;

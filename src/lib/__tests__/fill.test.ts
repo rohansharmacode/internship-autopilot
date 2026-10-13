@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { autoFill, chooseOption, missingRequired, rememberAnswers } from "../fill";
 import { parseGreenhouseQuestions } from "../forms/greenhouse";
 import { parseLeverApplyPage } from "../forms/lever";
+import type { FormField } from "../types";
 import { sampleProfile } from "./helpers";
 
 const fixture = (name: string) => readFileSync(path.join(__dirname, "fixtures", name), "utf8");
@@ -13,6 +14,8 @@ describe("chooseOption", () => {
   it("matches yes and no", () => {
     expect(chooseOption(yesNo, "No")?.value).toBe("0");
     expect(chooseOption([{ label: "Yes, I am authorized", value: "a" }, { label: "No", value: "b" }], "Yes")?.value).toBe("a");
+    expect(chooseOption([{ label: "None of the above", value: "n" }, { label: "No, I do not", value: "x" }], "No")?.value).toBe("x");
+    expect(chooseOption([{ label: "None of the above", value: "n" }], "No")).toBeNull();
   });
   it("matches a school inside a longer option and refuses to guess otherwise", () => {
     const schools = [{ label: "University College London (UCL)", value: "u" }, { label: "Imperial College", value: "i" }];
@@ -110,5 +113,16 @@ describe("Ashby-style choices", () => {
       sampleProfile(),
     );
     expect(fields.map((f) => f.value)).toEqual(["None", "Undergraduate/Bachelors"]);
+  });
+});
+
+describe("more standard questions", () => {
+  it("answers postcode and previous employment", () => {
+    const profile = { ...sampleProfile(), postalCode: "WC1E 6BT" };
+    const q = (label: string, extra: Partial<FormField> = {}): FormField => ({ key: label, label, type: "text", required: true, value: "", source: "empty", ...extra });
+    const yesNo = [{ label: "Yes", value: "1" }, { label: "No", value: "0" }];
+    const [zip, before] = autoFill([q("Zip / postal code"), q("Have you been employed by Lyft, or any subsidiary?", { type: "select", options: yesNo })], profile);
+    expect(zip.value).toBe("WC1E 6BT");
+    expect(before.value).toBe("No");
   });
 });

@@ -6,6 +6,8 @@ import type { Application, FormField, Source } from "./types";
 export type SubmitInput = {
   source: Source;
   url: string;
+  /** Tried when the form isn't on the first page, e.g. a company that redirects its Greenhouse page to its own site. */
+  fallbackUrl?: string;
   fields: FormField[];
   files: { resume?: string; cover_letter?: string };
   /** Fill everything but leave the Submit button alone. */
@@ -19,8 +21,9 @@ export type SubmitInput = {
 
 export type SubmitResult = { status: Application["status"]; log: string[] };
 
-const SUCCESS_TEXT = /thank you for (applying|your application|your interest)|application (has been |was )?(received|submitted)|we('ve| have) received your application|successfully submitted/i;
-const SUBMIT_BUTTON = /^\s*(submit( application)?|apply|send application)\s*$/i;
+const SUCCESS_TEXT = /thank you for (applying|your application|your interest)|application (has been |was )?(received|submitted)|we('ve| have) received your application|successfully submitted/gi;
+// Most specific first: job pages often also have an "Apply" button at the top that only scrolls to the form.
+const SUBMIT_BUTTONS = [/^\s*submit application\s*$/i, /^\s*submit\s*$/i, /^\s*send application\s*$/i, /^\s*apply( now)?\s*$/i];
 
 function attr(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -143,20 +146,43 @@ async function challengeVisible(page: Page): Promise<boolean> {
   return false;
 }
 
-async function succeeded(page: Page): Promise<boolean> {
-  if (/confirmation|thank|submitted|success/i.test(page.url())) return true;
+/** What the page looked like before Submit, so text already in the job description isn't mistaken for a confirmation. */
+type Baseline = { url: string; hits: string[] };
+
+async function successHits(page: Page): Promise<string[]> {
   const body = await page.locator("body").innerText().catch(() => "");
-  return SUCCESS_TEXT.test(body);
+  return (body.match(SUCCESS_TEXT) ?? []).map((m) => m.toLowerCase());
 }
 
-async function waitForSuccess(page: Page, ms: number): Promise<boolean> {
+async function baseline(page: Page): Promise<Baseline> {
+  return { url: page.url(), hits: await successHits(page) };
+}
+
+async function succeeded(page: Page, before: Baseline): Promise<boolean> {
+  const url = page.url();
+  if (url !== before.url && /confirmation|thank|submitted|success/i.test(url)) return true;
+  const now = await successHits(page);
+  // A new confirmation phrase, or more of the same one, means the page changed after Submit.
+  return now.some((h) => !before.hits.includes(h)) || now.length > before.hits.length;
+}
+
+async function waitForSuccess(page: Page, before: Baseline, ms: number): Promise<boolean> {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (page.isClosed()) return false;
-    if (await succeeded(page).catch(() => false)) return true;
+    if (await succeeded(page, before).catch(() => false)) return true;
     await page.waitForTimeout(1000).catch(() => undefined);
   }
   return false;
+}
+
+async function findSubmit(page: Page): Promise<Locator | null> {
+  for (const name of SUBMIT_BUTTONS) {
+    const b = page.getByRole("button", { name }).filter({ visible: true });
+    if ((await b.count()) > 0) return b.last();
+  }
+  const generic = page.locator("button[type=submit]:visible, input[type=submit]:visible");
+  return (await generic.count()) > 0 ? generic.last() : null;
 }
 
 async function validationErrors(page: Page): Promise<string[]> {
@@ -220,6 +246,12 @@ export async function fillAndSubmit(input: SubmitInput): Promise<SubmitResult> {
     const page = await browser.newPage();
     await page.goto(input.url, { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+    const firstKey = input.fields.find((f) => f.type !== "file")?.key;
+    if (input.fallbackUrl && firstKey && (await locate(page, input.source, input.fields.find((f) => f.key === firstKey)!)) === null) {
+      log.push("The form wasn't on the company's page, so the app opened the job board's own copy of it.");
+      await page.goto(input.fallbackUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+    }
 
     for (const field of input.fields) {
       if (!field.value.trim()) {
@@ -236,20 +268,23 @@ export async function fillAndSubmit(input: SubmitInput): Promise<SubmitResult> {
 
     await fs.mkdir(path.dirname(input.screenshotPath), { recursive: true });
     await page.screenshot({ path: input.screenshotPath, fullPage: true });
+    const before = await baseline(page);
 
     if (input.rehearsal) {
       log.push("Rehearsal: the form was filled but not submitted.");
-      if (input.headed) await waitForSuccess(page, handoff);
-      return { status: (await succeeded(page).catch(() => false)) ? "submitted" : "draft", log };
+      // In a visible window you can still press Submit yourself; the app notices if you do.
+      const submittedByYou = input.headed && (await waitForSuccess(page, before, handoff));
+      if (submittedByYou) log.push("You submitted it yourself; the site confirmed the application.");
+      return { status: submittedByYou ? "submitted" : "draft", log };
     }
 
-    const button = page.getByRole("button", { name: SUBMIT_BUTTON }).or(page.locator('button[type=submit], input[type=submit]')).first();
-    if ((await button.count()) === 0) {
+    const button = await findSubmit(page);
+    if (!button) {
       log.push("Could not find the Submit button.");
     } else {
       await button.click();
       log.push("Pressed Submit.");
-      if (await waitForSuccess(page, 20000)) {
+      if (await waitForSuccess(page, before, 20000)) {
         await page.screenshot({ path: input.screenshotPath, fullPage: true }).catch(() => undefined);
         log.push("The site confirmed the application.");
         return { status: "submitted", log };
@@ -261,7 +296,7 @@ export async function fillAndSubmit(input: SubmitInput): Promise<SubmitResult> {
 
     if (input.headed) {
       log.push("Waiting for you to finish in the browser window.");
-      if (await waitForSuccess(page, handoff)) {
+      if (await waitForSuccess(page, before, handoff)) {
         log.push("You finished it; the site confirmed the application.");
         return { status: "submitted", log };
       }
