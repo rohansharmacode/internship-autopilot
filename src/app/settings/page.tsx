@@ -20,6 +20,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <label className="inline">
           <input type="checkbox" name="rehearsal" defaultChecked={s.rehearsal} /> Rehearsal mode: fill forms but never press Submit
         </label>
+        <br />
+        <label className="inline">
+          <input type="checkbox" name="communityList" defaultChecked={s.communityList} /> Also search the{" "}
+          <a href="https://github.com/SimplifyJobs/Summer2026-Internships" target="_blank" rel="noreferrer">SimplifyJobs internship list</a>{" "}
+          (thousands of internships, updated daily)
+        </label>
         <div style={{ maxWidth: 220, marginTop: 12 }}>
           <label htmlFor="dailyLimit">Most applications to send per day</label>
           <input id="dailyLimit" name="dailyLimit" type="number" min={1} defaultValue={s.dailyLimit} />

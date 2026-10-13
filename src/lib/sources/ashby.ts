@@ -30,6 +30,7 @@ export function parseAshby(board: string, body: { jobs: AshbyJob[] }, now = new 
       description: j.descriptionPlain ?? "",
       postedAt: j.publishedAt ?? now,
       fetchedAt: now,
+      via: "board" as const,
     }));
 }
 

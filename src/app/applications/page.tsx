@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Flash } from "@/components/Flash";
+import { batch, recoverInterrupted } from "@/lib/applications";
 import { STATUS_LABEL } from "@/lib/labels";
 import { readDb } from "@/lib/store";
 import type { ApplicationStatus } from "@/lib/types";
@@ -12,15 +13,27 @@ const ORDER: ApplicationStatus[] = ["needs_you", "draft", "sending", "failed", "
 
 export default async function ApplicationsPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { msg } = await searchParams;
+  await recoverInterrupted();
   const db = await readDb();
   const jobs = new Map(db.jobs.map((j) => [j.id, j]));
   const apps = [...db.applications].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || b.updatedAt.localeCompare(a.updatedAt));
   return (
     <>
-      <AutoRefresh active={apps.some((a) => a.status === "sending")} />
+      <AutoRefresh active={batch.running || apps.some((a) => a.status === "sending")} />
       <h1>Applications</h1>
       <p className="lead">Nothing is sent until you open a draft and approve it.</p>
       <Flash msg={msg} />
+      {batch.running && (
+        <div className="card">
+          Preparing drafts: {batch.done} of {batch.total} done.
+        </div>
+      )}
+      {!batch.running && batch.failed.length > 0 && (
+        <div className="card small">
+          Some drafts could not be prepared:
+          <ul>{batch.failed.map((f) => <li key={f}>{f}</li>)}</ul>
+        </div>
+      )}
       {apps.length === 0 && (
         <p className="muted">
           No applications yet. Pick one from <Link href="/jobs">Internships</Link>.

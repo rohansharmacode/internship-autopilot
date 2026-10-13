@@ -15,9 +15,16 @@ function profileBrief(p: Profile): string {
     `Education: ${[p.degree, p.major, p.school].filter(Boolean).join(", ")}${p.graduationDate ? `, graduating ${p.graduationDate}` : ""}${p.gpa ? `, GPA ${p.gpa}` : ""}`,
     `Location: ${[p.city, p.country].filter(Boolean).join(", ")}`,
     `Skills: ${p.skills.join(", ")}`,
+    p.languages?.length && `Languages spoken: ${p.languages.join(", ")}`,
+    `Work authorised where applying: ${p.answers.workAuthorized || "not stated"}; needs sponsorship: ${p.answers.needsSponsorship || "not stated"}; earliest start: ${p.answers.earliestStart || "not stated"}`,
     p.summary && `About: ${p.summary}`,
     p.github?.repos.length &&
       `GitHub projects:\n${p.github.repos.map((r) => `- ${r.name} (${r.language || "n/a"}, ${r.stars}★): ${r.description}`).join("\n")}`,
+    p.savedAnswers?.length &&
+      `Answers the student wrote for earlier applications (match their voice; reuse facts from them):\n${p.savedAnswers
+        .slice(-8)
+        .map((a) => `Q: ${a.question}\nA: ${a.answer}`)
+        .join("\n\n")}`,
     p.cv?.text && `CV:\n${p.cv.text.slice(0, 12000)}`,
     p.linkedinText && `LinkedIn profile:\n${p.linkedinText.slice(0, 8000)}`,
   ];

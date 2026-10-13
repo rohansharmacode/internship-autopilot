@@ -1,4 +1,4 @@
-import { importGithubAction, saveProfile, uploadCv, uploadLinkedin } from "@/app/actions";
+import { forgetAnswer, importGithubAction, saveProfile, uploadCv, uploadLinkedin } from "@/app/actions";
 import { Flash } from "@/components/Flash";
 import { Submit } from "@/components/Submit";
 import { readDb } from "@/lib/store";
@@ -95,6 +95,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         <div className="card">
           <label htmlFor="skills">Skills, separated by commas</label>
           <textarea id="skills" name="skills" defaultValue={p.skills.join(", ")} />
+          <label htmlFor="languages" style={{ marginTop: 12 }}>Languages you speak, separated by commas</label>
+          <input id="languages" name="languages" defaultValue={p.languages.join(", ")} />
           <label htmlFor="summary" style={{ marginTop: 12 }}>Two sentences about what you study and build</label>
           <textarea id="summary" name="summary" defaultValue={p.summary} />
         </div>
@@ -124,6 +126,23 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         </div>
         <Submit className="primary" pending="Saving…">Save profile</Submit>
       </form>
+
+      <h2>Answers the app remembers</h2>
+      <p className="small muted">
+        When you answer a company&apos;s own question, the app reuses your answer the next time the same question comes up. Questions that
+        name a company are not reused.
+      </p>
+      {p.savedAnswers.length === 0 && <p className="small muted">Nothing saved yet.</p>}
+      {p.savedAnswers.map((a) => (
+        <form action={forgetAnswer} className="card" key={a.question}>
+          <div className="spread">
+            <strong>{a.question}</strong>
+            <input type="hidden" name="question" value={a.question} />
+            <button className="link small">Forget</button>
+          </div>
+          <div className="small" style={{ whiteSpace: "pre-wrap" }}>{a.answer}</div>
+        </form>
+      ))}
     </>
   );
 }

@@ -40,6 +40,7 @@ async function locate(page: Page, source: Source, field: FormField): Promise<Loc
   return firstVisible([
     ...ids.map((id) => page.locator(`[id="${attr(id)}"]`)),
     page.locator(`[name="${key}"]`),
+    page.locator(`label[for="${key}"]`).locator('xpath=ancestor::*[contains(@class, "field-entry")][1]//*[self::input or self::textarea][not(@type="hidden")]'),
     page.getByLabel(field.label, { exact: true }),
     page.getByLabel(field.label),
   ]);
@@ -62,7 +63,39 @@ async function pickFromCombobox(page: Page, input: Locator, text: string, loose:
   }
 }
 
+/** Ashby draws Yes/No buttons, radio lists and checkbox lists; each answer is clicked by its visible text. */
+async function fillWidget(page: Page, field: FormField): Promise<string | null> {
+  const entry = page
+    .locator(`label[for="${attr(field.key)}"], legend[for="${attr(field.key)}"]`)
+    .first()
+    .locator('xpath=ancestor::*[self::fieldset or contains(@class, "field-entry")][1]');
+  if ((await entry.count()) === 0) return `Could not find "${field.label}" on the page`;
+  const values = field.type === "multiselect" ? field.value.split("\n").filter(Boolean) : [field.value];
+  for (const v of values) {
+    if (field.widget === "yesno") {
+      await entry.getByRole("button", { name: v, exact: true }).first().click();
+    } else if (field.widget === "combobox") {
+      await pickFromCombobox(page, entry.getByRole("combobox").first(), v, true);
+    } else {
+      await entry.locator("label").filter({ hasText: new RegExp(`^\\s*${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`) }).first().click();
+    }
+  }
+  return null;
+}
+
+async function checkHard(box: Locator): Promise<void> {
+  try {
+    await box.check({ force: true, timeout: 3000 });
+  } catch {
+    // Some sites hide the real checkbox behind a styled label; clicking the label is what a person does.
+    const id = await box.getAttribute("id");
+    const label = id ? box.page().locator(`label[for="${attr(id)}"]`) : box.locator("xpath=ancestor::label[1]");
+    await label.first().click();
+  }
+}
+
 async function fillField(page: Page, source: Source, field: FormField, files: SubmitInput["files"]): Promise<string | null> {
+  if (field.widget && field.type !== "file") return fillWidget(page, field);
   if (field.type === "file") {
     const file = files[field.value as keyof SubmitInput["files"]];
     if (!file) return `No file for ${field.label}`;
@@ -82,7 +115,7 @@ async function fillField(page: Page, source: Source, field: FormField, files: Su
   // Radio buttons and checkboxes share a name and carry the answer as their value.
   const group = page.locator(`input[name="${attr(field.key)}"]:is([type=radio],[type=checkbox])`);
   if ((await group.count()) > 0) {
-    for (const v of values) await page.locator(`input[name="${attr(field.key)}"][value="${attr(v)}"]`).first().check({ force: true });
+    for (const v of values) await checkHard(page.locator(`input[name="${attr(field.key)}"][value="${attr(v)}"]`).first());
     return null;
   }
 
@@ -137,6 +170,29 @@ async function validationErrors(page: Page): Promise<string[]> {
     )
     .catch(() => [] as string[]);
   return [...new Set(errs)];
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+}
+
+/** Renders the cover letter as a plain one-page PDF, which every application form accepts. */
+export async function writeCoverLetterPdf(text: string, file: string): Promise<void> {
+  const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined });
+  try {
+    const page = await browser.newPage();
+    const body = text
+      .split(/\n{2,}/)
+      .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+      .join("");
+    await page.setContent(
+      `<html><body style="font: 11.5pt/1.5 Georgia, serif; color: #111; margin: 0">${body}</body></html>`,
+    );
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await page.pdf({ path: file, format: "A4", margin: { top: "25mm", bottom: "25mm", left: "25mm", right: "25mm" } });
+  } finally {
+    await browser.close();
+  }
 }
 
 /**

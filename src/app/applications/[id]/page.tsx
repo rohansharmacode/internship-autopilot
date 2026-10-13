@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { markSubmitted, saveApplication } from "@/app/actions";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Flash } from "@/components/Flash";
+import { recoverInterrupted } from "@/lib/applications";
 import { STATUS_LABEL } from "@/lib/labels";
 import { readDb } from "@/lib/store";
 import type { FormField } from "@/lib/types";
@@ -66,6 +67,7 @@ function Field({ f, hasCv }: { f: FormField; hasCv: boolean }) {
 
 export default async function ApplicationPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ msg?: string }> }) {
   const [{ id }, { msg }] = await Promise.all([params, searchParams]);
+  await recoverInterrupted();
   const db = await readDb();
   const app = db.applications.find((a) => a.id === id);
   if (!app) notFound();
@@ -101,6 +103,9 @@ export default async function ApplicationPage({ params, searchParams }: { params
         </div>
       )}
 
+      {app.fields.length === 0 ? (
+        <p className="muted">You applied to this one on the company&apos;s own site.</p>
+      ) : (
       <form action={saveApplication}>
         <input type="hidden" name="id" value={app.id} />
         <fieldset disabled={locked} style={{ border: 0, padding: 0, margin: 0 }}>
@@ -129,6 +134,7 @@ export default async function ApplicationPage({ params, searchParams }: { params
           )}
         </fieldset>
       </form>
+      )}
       {app.status === "submitted" && (
         <form action={saveApplication}>
           <input type="hidden" name="id" value={app.id} />

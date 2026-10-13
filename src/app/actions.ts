@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { aiAvailable, profileFromDocuments } from "@/lib/ai";
-import { prepareApplication, refreshJobs, rescoreJobs, saveAnswers, sendApplication, setStatus } from "@/lib/applications";
+import { prepareApplication, prepareBest, recordManualApplication, refreshJobs, rescoreJobs, saveAnswers, sendApplication, setStatus } from "@/lib/applications";
 import { contactsFromText, importGithub, pdfToText } from "@/lib/profile-import";
 import { mergeSkills } from "@/lib/skills";
 import { boardFromUrl } from "@/lib/sources";
@@ -35,6 +35,7 @@ export async function saveProfile(fd: FormData) {
       p[k] = str(fd, k);
     }
     p.skills = mergeSkills(list(str(fd, "skills")));
+    p.languages = mergeSkills(list(str(fd, "languages")));
     p.answers = {
       workAuthorized: yn(str(fd, "workAuthorized")),
       needsSponsorship: yn(str(fd, "needsSponsorship")),
@@ -130,6 +131,25 @@ export async function refreshJobsAction() {
   back("/jobs", `Found ${r.added} new internship${r.added === 1 ? "" : "s"} (${r.total} listed).${errs}`);
 }
 
+export async function prepareBestAction(fd: FormData) {
+  const n = await prepareBest(Math.min(25, Math.max(1, Number(str(fd, "count")) || 5)));
+  back("/applications", n ? `Preparing ${n} application${n === 1 ? "" : "s"}. Each one waits here for your approval.` : "Nothing new to prepare. Search for internships or lower your minimum score.");
+}
+
+export async function markAppliedExternally(fd: FormData) {
+  const id = await recordManualApplication(str(fd, "jobId"));
+  revalidatePath("/", "layout");
+  redirect(`/applications/${id}`);
+}
+
+export async function forgetAnswer(fd: FormData) {
+  const q = str(fd, "question");
+  await updateDb((db) => {
+    db.profile.savedAnswers = db.profile.savedAnswers.filter((a) => a.question !== q);
+  });
+  back("/profile", "Forgot that answer.");
+}
+
 export async function hideJob(fd: FormData) {
   const id = str(fd, "jobId");
   await updateDb((db) => {
@@ -196,6 +216,7 @@ export async function markSubmitted(fd: FormData) {
 export async function saveSettings(fd: FormData) {
   await updateDb((db) => {
     db.settings.rehearsal = fd.get("rehearsal") === "on";
+    db.settings.communityList = fd.get("communityList") === "on";
     db.settings.showBrowser = fd.get("showBrowser") === "on";
     db.settings.dailyLimit = Math.max(1, Number(str(fd, "dailyLimit")) || 15);
   });

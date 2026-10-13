@@ -3,12 +3,17 @@
 A web app that runs on your own computer. You give it your details once (CV, LinkedIn, GitHub and the
 standard questions every application asks). Then it:
 
-1. **Finds internships** on company job boards (Greenhouse, Lever and Ashby) and ranks them against your
-   skills, the title keywords you care about and where you want to work.
+1. **Finds internships** on company job boards (Greenhouse, Lever and Ashby) and in the
+   [SimplifyJobs community list](https://github.com/SimplifyJobs/Summer2026-Internships) (about 4,500 open
+   internships, updated daily). It ranks them against your skills, the title keywords you care about,
+   where you want to work and, if you need a visa, whether the company sponsors.
 2. **Prepares each application** from the employer's real form. Your profile fills the standard
    questions, and Claude drafts a cover letter and answers to the company's own questions. Claude only
    uses facts from your profile. When it can't answer something truthfully it leaves it blank for you.
+   *Prepare* does one job; *Prepare the best N* drafts several in one go.
 3. **Waits for your approval.** You read the filled-in form, edit anything, and press *Approve and send*.
+   When you answer a company's own question, the app remembers it and reuses it the next time the same
+   question comes up.
 4. **Sends it** by opening the application page in a browser, filling every field, attaching your CV and
    pressing Submit. If the site shows a captcha or asks something the app couldn't fill, the window stays
    open so you can finish it yourself. The app never tries to get around a captcha.
@@ -45,9 +50,10 @@ good way to try it first.
 | --- | --- | --- | --- |
 | Greenhouse | Yes | Yes | Public job board API, full question list including custom questions. |
 | Lever | Yes | Yes | Public postings API. Custom questions are read from the apply page. |
-| Ashby | Yes | Partly | Standard fields are filled; extra questions are matched by label or left for you. |
+| Ashby | Yes | Yes | The app reads the live form, including Yes/No buttons, radio lists and checklists. |
 | LinkedIn | No | No | Used only as a source for your profile. LinkedIn's terms forbid automated applying and accounts get restricted. |
-| Indeed, Handshake, Glassdoor, Workday | No | No | Their terms forbid bots, or each company's Workday needs its own account. |
+| Workday and other company sites | Yes, via the community list | No | Listed with an *Apply on site* link; press *I applied* to track it. Each Workday site needs its own account. |
+| Indeed, Handshake, Glassdoor | No | No | Their terms forbid bots. |
 
 Lots of companies hire interns through Greenhouse, Lever or Ashby. The app ships with a starter list
 (Stripe, Figma, Databricks, Palantir, Ramp, OpenAI, Anthropic and more). You can add any company by
@@ -61,6 +67,8 @@ pasting its jobs link in Settings.
 - Questions like "have you worked here before?" are answered "No" with a note asking you to check it.
   Voluntary equal-opportunity questions are left for you.
 - After sending, each application keeps a log and a screenshot of the form as the app left it.
+- The cover letter is attached as a PDF named after you and the company.
+- If the app is closed while sending, that application is marked *Needs you* the next time you open it.
 
 ## Development
 
@@ -74,7 +82,7 @@ Set `PLAYWRIGHT_CHROMIUM_PATH` to use a Chromium that is already installed inste
 
 Code layout:
 
-- `src/lib/sources/`: fetch internships from each job board's public API.
+- `src/lib/sources/`: fetch internships from each job board's public API and the community list.
 - `src/lib/forms/`: load a job's real application form as a list of fields.
 - `src/lib/fill.ts`: answer fields from your profile (pure, unit tested).
 - `src/lib/match.ts`: score jobs against your profile (pure, unit tested).

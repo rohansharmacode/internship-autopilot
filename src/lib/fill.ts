@@ -34,6 +34,7 @@ const RULES: Rule[] = [
   { test: /github/, get: githubUrl },
   { test: /website|portfolio|personal site|other url/, get: (p) => p.portfolioUrl || githubUrl(p) },
   { test: /pronoun/, get: (p) => p.answers.pronouns || null },
+  { test: /language(s)? (skill|you speak|spoken)|which languages|languages do you speak|fluent in|language proficienc/, get: (p) => p.languages.join("\n") },
   { test: /sponsor/, get: (p) => yn(p.answers.needsSponsorship) },
   { test: /authori[sz]ed to work|legally (authori[sz]ed|eligible)|right to work|eligible to work|work authori[sz]ation/, get: (p) => yn(p.answers.workAuthorized) },
   { test: /relocat/, get: (p) => yn(p.answers.willingToRelocate) },
@@ -72,6 +73,36 @@ export function chooseOption(options: FieldOption[], wanted: string): FieldOptio
 
 const HEARD_FALLBACKS = ["company website", "careers page", "career site", "website", "job board", "online", "other"];
 
+function fitToField(field: FormField, ans: Answer, label: string): Answer | null {
+  if (field.type !== "select" && field.type !== "multiselect") return ans;
+  if (!field.options?.length) return ans;
+  if (field.type === "multiselect") {
+    const picks = ans.value
+      .split("\n")
+      .map((v) => fitToField({ ...field, type: "select" }, { value: v }, label)?.value)
+      .filter((v): v is string => Boolean(v));
+    return picks.length ? { value: [...new Set(picks)].join("\n"), note: ans.note } : null;
+  }
+  let opt = chooseOption(field.options, ans.value);
+  if (!opt && ans.value === "No" && /sponsor|visa/.test(label)) opt = chooseOption(field.options, "None");
+  if (!opt && /graduat/.test(label)) {
+    const { year, month } = gradParts(ans.value);
+    const m = MONTHS.indexOf(month.toLowerCase());
+    const season = m < 0 ? "" : m <= 5 ? "Spring" : m <= 7 ? "Summer" : "Fall";
+    for (const alt of [season && `${season} ${year}`, m >= 0 && m <= 5 && `Winter ${year}`, year]) {
+      if (alt && (opt = chooseOption(field.options, alt))) break;
+    }
+  }
+  if (!opt && /degree/.test(label)) {
+    const level = /^(b|bachelor|undergrad)/i.test(ans.value) ? ["Bachelor", "Undergraduate", "BS", "BA"] : /^(m|master)/i.test(ans.value) ? ["Master", "MS"] : /^(phd|doctor)/i.test(ans.value) ? ["PhD", "Doctor"] : [];
+    for (const alt of level) if ((opt = chooseOption(field.options, alt))) break;
+  }
+  if (!opt && /how (did )?you/.test(label)) {
+    for (const f of HEARD_FALLBACKS) if ((opt = chooseOption(field.options, f))) break;
+  }
+  return opt ? { value: opt.label, note: ans.note } : null;
+}
+
 export function answerFor(field: FormField, profile: Profile): Answer | null {
   const label = normalise(field.label);
   const key = field.key.toLowerCase();
@@ -80,25 +111,31 @@ export function answerFor(field: FormField, profile: Profile): Answer | null {
     const raw = rule.get(profile, field);
     const ans = typeof raw === "string" ? { value: raw } : raw;
     if (!ans || !ans.value) return null;
-    if (field.type === "select" || field.type === "multiselect") {
-      if (!field.options?.length) return ans;
-      let opt = chooseOption(field.options, ans.value);
-      if (!opt && /graduat/.test(label)) {
-        const { year, month } = gradParts(ans.value);
-        const m = MONTHS.indexOf(month.toLowerCase());
-        const season = m < 0 ? "" : m <= 5 ? "Spring" : m <= 7 ? "Summer" : "Fall";
-        for (const alt of [season && `${season} ${year}`, m >= 0 && m <= 5 && `Winter ${year}`, year]) {
-          if (alt && (opt = chooseOption(field.options, alt))) break;
-        }
-      }
-      if (!opt && /how (did )?you/.test(label)) {
-        for (const f of HEARD_FALLBACKS) if ((opt = chooseOption(field.options, f))) break;
-      }
-      return opt ? { value: opt.label, note: ans.note } : null;
-    }
-    return ans;
+    return fitToField(field, ans, label);
   }
+  // Not a standard question: reuse what you answered last time you saw exactly this question.
+  const saved = profile.savedAnswers?.find((a) => normalise(a.question) === label);
+  if (saved?.answer) return fitToField(field, { value: saved.answer, note: "Your answer from an earlier application." }, label);
   return null;
+}
+
+/** True when the profile rules already cover this question, so it isn't worth remembering per application. */
+function isStandard(field: FormField): boolean {
+  const label = normalise(field.label);
+  const key = field.key.toLowerCase();
+  return RULES.some((r) => r.test.test(label) || r.test.test(key));
+}
+
+/** Questions that name the company ("Why Figma?") are specific to one application and are not reused. */
+export function rememberAnswers(profile: Profile, fields: FormField[], company = ""): Profile["savedAnswers"] {
+  const saved = new Map((profile.savedAnswers ?? []).map((a) => [normalise(a.question), a]));
+  const now = new Date().toISOString();
+  for (const f of fields) {
+    if (f.source !== "you" || !f.value.trim() || f.type === "file" || isStandard(f)) continue;
+    if (company && normalise(f.label).includes(normalise(company))) continue;
+    saved.set(normalise(f.label), { question: f.label, answer: f.value, savedAt: now });
+  }
+  return [...saved.values()];
 }
 
 /** Fills every field the profile can answer. Fields it cannot answer stay empty for the AI draft or for you. */

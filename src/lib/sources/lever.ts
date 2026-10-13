@@ -33,6 +33,7 @@ export function parseLever(board: string, postings: LeverPosting[], now = new Da
       ].join("\n\n").trim(),
       postedAt: p.createdAt ? new Date(p.createdAt).toISOString() : now,
       fetchedAt: now,
+      via: "board" as const,
     }));
 }
 

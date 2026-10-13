@@ -32,6 +32,7 @@ export function parseGreenhouse(board: string, body: { jobs: GhJob[] }, now = ne
         description: htmlToText(j.content ?? ""),
         postedAt: j.first_published ?? j.updated_at ?? now,
         fetchedAt: now,
+      via: "board" as const,
       };
     });
 }

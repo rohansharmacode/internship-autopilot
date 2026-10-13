@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { autoFill, chooseOption, missingRequired } from "../fill";
+import { autoFill, chooseOption, missingRequired, rememberAnswers } from "../fill";
 import { parseGreenhouseQuestions } from "../forms/greenhouse";
 import { parseLeverApplyPage } from "../forms/lever";
 import { sampleProfile } from "./helpers";
@@ -58,5 +58,57 @@ describe("autoFill", () => {
   it("never overwrites answers you typed", () => {
     const [f] = autoFill([{ key: "email", label: "Email", type: "text", required: true, value: "mine@x.com", source: "you" }], profile);
     expect(f.value).toBe("mine@x.com");
+  });
+});
+
+describe("languages and remembered answers", () => {
+  it("ticks every language you speak", () => {
+    const profile = { ...sampleProfile(), languages: ["English", "Hindi"] };
+    const [f] = autoFill(
+      [
+        {
+          key: "cards[x][field0]",
+          label: "Language Skill(s) (Check all that apply)",
+          type: "multiselect",
+          required: true,
+          options: ["English (ENG)", "Hindi (HIN)", "French (FRA)"].map((l) => ({ label: l, value: l })),
+          value: "",
+          source: "empty",
+        },
+      ],
+      profile,
+    );
+    expect(f.value).toBe("English (ENG)\nHindi (HIN)");
+  });
+
+  it("reuses an answer you wrote before, but not one that names the company", () => {
+    const profile = sampleProfile();
+    const question = (label: string) => ({ key: "q", label, type: "textarea" as const, required: true, value: "", source: "empty" as const });
+    profile.savedAnswers = rememberAnswers(
+      profile,
+      [
+        { ...question("What's something you know an unreasonable amount about?"), value: "Trains.", source: "you" },
+        { ...question("Why do you want to join Figma?"), value: "Design tools.", source: "you" },
+        { ...question("Email"), value: "x@y.z", source: "you" },
+      ],
+      "Figma",
+    );
+    expect(profile.savedAnswers.map((a) => a.question)).toEqual(["What's something you know an unreasonable amount about?"]);
+    const [f] = autoFill([question("What's something you know an unreasonable amount about?")], profile);
+    expect(f).toMatchObject({ value: "Trains.", source: "profile" });
+  });
+});
+
+describe("Ashby-style choices", () => {
+  it("answers a sponsorship list with None and a degree list with the bachelor's option", () => {
+    const opts = (...l: string[]) => l.map((x) => ({ label: x, value: x }));
+    const fields = autoFill(
+      [
+        { key: "a", label: "Will you now or at any time in the future require sponsorship?", type: "select", required: true, options: opts("OPT", "H1B", "None", "Other"), value: "", source: "empty", widget: "radio" },
+        { key: "b", label: "Degree Type", type: "multiselect", required: true, options: opts("Undergraduate/Bachelors", "Master's", "PhD"), value: "", source: "empty", widget: "checkboxes" },
+      ],
+      sampleProfile(),
+    );
+    expect(fields.map((f) => f.value)).toEqual(["None", "Undergraduate/Bachelors"]);
   });
 });

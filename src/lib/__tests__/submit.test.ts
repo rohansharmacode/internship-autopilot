@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { fillAndSubmit } from "../submit";
+import { fillAndSubmit, writeCoverLetterPdf } from "../submit";
 import type { FormField } from "../types";
 
 const html = readFileSync(path.join(__dirname, "fixtures", "form.html"), "utf8");
@@ -35,6 +35,8 @@ const fields: FormField[] = [
   f("cards[abc][field1]", "Languages", "multiselect", "English\nHindi"),
   f("grad", "Graduation year", "select", "2027"),
   f("why", "Why us?", "textarea", "Because I like it."),
+  { ...f("relo", "Are you willing to relocate?", "select", "Yes"), widget: "yesno" },
+  { ...f("deg", "Degree Type", "multiselect", "Undergraduate/Bachelors"), widget: "checkboxes" },
 ];
 
 describe("fillAndSubmit", () => {
@@ -77,5 +79,13 @@ describe("fillAndSubmit", () => {
     });
     expect(result.status).toBe("needs_you");
     expect(result.log.join("\n")).toMatch(/Something is missing/);
+  });
+});
+
+describe("writeCoverLetterPdf", () => {
+  it("writes a PDF", async () => {
+    const file = path.join(dir, "letter.pdf");
+    await writeCoverLetterPdf("Dear team,\n\nHello <there> & welcome.\n\nThanks", file);
+    expect(readFileSync(file).subarray(0, 4).toString()).toBe("%PDF");
   });
 });

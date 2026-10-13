@@ -26,6 +26,8 @@ export function emptyProfile(): Profile {
     portfolioUrl: "",
     summary: "",
     skills: [],
+    languages: ["English"],
+    savedAnswers: [],
     answers: {
       workAuthorized: "",
       needsSponsorship: "",
@@ -43,6 +45,6 @@ export function emptyDb(): Db {
     profile: emptyProfile(),
     jobs: [],
     applications: [],
-    settings: { boards: DEFAULT_BOARDS, rehearsal: false, showBrowser: true, dailyLimit: 15 },
+    settings: { boards: DEFAULT_BOARDS, rehearsal: false, showBrowser: true, dailyLimit: 15, communityList: true },
   };
 }

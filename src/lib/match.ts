@@ -10,7 +10,7 @@ export function isInternship(title: string, extra = ""): boolean {
 }
 
 /** Scores a job 0-100 for this profile and says why, so the list can be sorted and explained. */
-export function scoreJob(job: Pick<Job, "title" | "description" | "location">, profile: Profile): { score: number; reasons: string[] } {
+export function scoreJob(job: Pick<Job, "title" | "description" | "location"> & Partial<Pick<Job, "sponsorship">>, profile: Profile): { score: number; reasons: string[] } {
   const reasons: string[] = [];
   let score = 0;
 
@@ -20,6 +20,9 @@ export function scoreJob(job: Pick<Job, "title" | "description" | "location">, p
   if (jobSkills.length > 0) {
     const ratio = overlap.length / Math.min(jobSkills.length, 8);
     score += Math.round(Math.min(1, ratio) * 50);
+  } else if (job.description.length < 200) {
+    // Listings without a description can't be compared on skills yet; don't bury them for it.
+    score += 15;
   }
   if (overlap.length) reasons.push(`Skills you have: ${overlap.slice(0, 6).join(", ")}`);
 
@@ -46,6 +49,14 @@ export function scoreJob(job: Pick<Job, "title" | "description" | "location">, p
     } else {
       reasons.push(`Location: ${job.location || "not stated"}`);
     }
+  }
+
+  if (profile.answers.needsSponsorship === "yes" && job.sponsorship && /not offer|citizen/i.test(job.sponsorship)) {
+    score -= 40;
+    reasons.push(job.sponsorship);
+  } else if (profile.answers.needsSponsorship === "yes" && job.sponsorship && /offers sponsorship/i.test(job.sponsorship)) {
+    score += 10;
+    reasons.push("Offers sponsorship");
   }
 
   if (SENIOR_RE.test(job.title)) {

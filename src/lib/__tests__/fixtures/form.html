@@ -29,6 +29,16 @@
   <label for="grad">Graduation year</label>
   <select id="grad" name="grad"><option value="">Select</option><option>2026</option><option>2027</option></select>
   <label for="why">Why us?</label><textarea id="why" name="why"></textarea>
+  <div class="ashby-application-form-field-entry">
+    <label for="relo">Are you willing to relocate?</label>
+    <div><button type="button" class="yn">Yes</button><button type="button" class="yn">No</button></div>
+    <input type="checkbox" name="relo" id="relo-box" style="display:none">
+  </div>
+  <div class="ashby-application-form-field-entry">
+    <label for="deg">Degree Type</label>
+    <input type="checkbox" id="deg-0" name="Undergraduate/Bachelors" style="opacity:0;position:absolute;width:1px"><label for="deg-0">Undergraduate/Bachelors</label>
+    <input type="checkbox" id="deg-1" name="Master's" style="opacity:0;position:absolute;width:1px"><label for="deg-1">Master's</label>
+  </div>
   <button type="submit">Submit application</button>
 </form>
 <script>
@@ -43,6 +53,7 @@
     const v = e.target.dataset.v; if (!v) return;
     box.value = v; document.getElementById('question_1-value').value = v; list.hidden = true;
   });
+  for (const b of document.querySelectorAll('.yn')) b.addEventListener('click', () => { document.getElementById('relo-box').checked = b.textContent === 'Yes'; });
   document.getElementById('app').addEventListener('submit', (e) => {
     e.preventDefault();
     const ok = document.getElementById('question_1-value').value === 'Yes'
@@ -50,7 +61,9 @@
       && document.querySelectorAll('input[name="cards[abc][field1]"]:checked').length === 2
       && document.getElementById('grad').value === '2027'
       && document.querySelector('input[name="cards[abc][field0]"]:checked')?.value === 'No'
-      && document.getElementById('why').value.length > 0;
+      && document.getElementById('why').value.length > 0
+      && document.getElementById('relo-box').checked
+      && document.getElementById('deg-0').checked && !document.getElementById('deg-1').checked;
     document.body.innerHTML = ok ? '<p>Thank you for applying!</p>' : '<p role="alert">Something is missing</p>';
   });
 </script>

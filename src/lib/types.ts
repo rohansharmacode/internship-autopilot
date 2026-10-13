@@ -1,5 +1,8 @@
 export type Source = "greenhouse" | "lever" | "ashby";
 
+/** Where a listing came from. "external" postings (Workday and others) are tracked but applied to by you. */
+export type JobSource = Source | "external";
+
 export type YesNo = "yes" | "no" | "";
 
 /** Answers to the questions almost every application asks. Filled once on the profile page. */
@@ -11,6 +14,8 @@ export type StandardAnswers = {
   howDidYouHear: string;
   pronouns: string;
 };
+
+export type SavedAnswer = { question: string; answer: string; savedAt: string };
 
 export type GithubRepo = {
   name: string;
@@ -37,6 +42,10 @@ export type Profile = {
   portfolioUrl: string;
   summary: string;
   skills: string[];
+  /** Spoken languages, used for "which languages do you speak" questions. */
+  languages: string[];
+  /** Answers you gave to custom questions, reused when the same question appears again. */
+  savedAnswers: SavedAnswer[];
   cv?: { fileName: string; storedPath: string; text: string; uploadedAt: string };
   linkedinText?: string;
   github?: { repos: GithubRepo[]; languages: string[]; importedAt: string };
@@ -51,7 +60,7 @@ export type Profile = {
 
 export type Job = {
   id: string;
-  source: Source;
+  source: JobSource;
   board: string;
   externalId: string;
   company: string;
@@ -62,6 +71,11 @@ export type Job = {
   description: string;
   postedAt: string;
   fetchedAt: string;
+  /** What the listing says about visa sponsorship, when known. */
+  sponsorship?: string;
+  /** Which feed found it: a company's own job board, or the community internship list. */
+  via: "board" | "community";
+  firstSeenAt?: string;
   score?: number;
   reasons?: string[];
   hidden?: boolean;
@@ -83,6 +97,8 @@ export type FormField = {
   value: string;
   source: FieldSource;
   note?: string;
+  /** How the site draws this question, when it isn't a plain input (Ashby's Yes/No buttons, for example). */
+  widget?: "yesno" | "radio" | "checkboxes" | "combobox";
 };
 
 export type ApplicationStatus =
@@ -115,6 +131,9 @@ export type Settings = {
   /** Keep the browser window visible so captchas and unknown questions can be handled by you. */
   showBrowser: boolean;
   dailyLimit: number;
+  /** Also pull internships from the SimplifyJobs community list on GitHub. */
+  communityList: boolean;
+  lastSearchAt?: string;
 };
 
 export type Db = {
